@@ -1,8 +1,115 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/* Dawn: warm neutral light (current default). Clean, approachable, professional. */
+:root,
+[data-theme="dawn"] {
+  --background: #fafafa;
+  --foreground: #09090b;
+  --surface: #ffffff;
+  --surface-border: #e4e4e7;
+  --text-primary: #09090b;
+  --text-secondary: #52525b;
+  --text-muted: #a1a1aa;
+  --border: #e4e4e7;
+  --ring: rgba(0, 0, 0, 0.08);
+  --btn-primary-bg: #18181b;
+  --btn-primary-text: #ffffff;
+  --btn-primary-hover: #27272a;
+  --btn-secondary-bg: #ffffff;
+  --btn-secondary-border: #e4e4e7;
+  --btn-secondary-text: #52525b;
+  --btn-secondary-hover: #f4f4f5;
+  --input-bg: #ffffff;
+  --input-border: #e4e4e7;
+  --input-text: #09090b;
+  --input-placeholder: #a1a1aa;
+  --nav-active-bg: #18181b;
+  --nav-active-text: #ffffff;
+  --nav-hover-bg: #f4f4f5;
+  --radius: 10px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.04);
+  --badge-success-bg: #ecfdf5;
+  --badge-success-text: #047857;
+  --badge-warning-bg: #fffbeb;
+  --badge-warning-text: #b45309;
+  --badge-neutral-bg: #f4f4f5;
+  --badge-neutral-text: #52525b;
+  --muted-bg: #f4f4f5;
+}
+
+/* Slate: cooler, more formal. Soft blue accent so it’s not flat. */
+[data-theme="slate"] {
+  --background: #eef2f9;
+  --foreground: #0f172a;
+  --surface: #ffffff;
+  --surface-border: #dce4f0;
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #64748b;
+  --border: #dce4f0;
+  --ring: rgba(30, 64, 118, 0.2);
+  --btn-primary-bg: #0f172a;
+  --btn-primary-text: #ffffff;
+  --btn-primary-hover: #1e293b;
+  --btn-secondary-bg: #ffffff;
+  --btn-secondary-border: #c5d0e2;
+  --btn-secondary-text: #475569;
+  --btn-secondary-hover: #e8eef6;
+  --input-bg: #ffffff;
+  --input-border: #dce4f0;
+  --input-text: #0f172a;
+  --input-placeholder: #94a3b8;
+  --nav-active-bg: #0f172a;
+  --nav-active-text: #ffffff;
+  --nav-hover-bg: #e2e8f2;
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06);
+  --shadow-card: 0 1px 3px rgba(30, 64, 118, 0.06);
+  --badge-success-bg: #ecfdf5;
+  --badge-success-text: #047857;
+  --badge-warning-bg: #fffbeb;
+  --badge-warning-text: #b45309;
+  --badge-neutral-bg: #e8eef6;
+  --badge-neutral-text: #475569;
+  --muted-bg: #e8eef6;
+}
+
+/* Onyx: deep dark. Slightly softened for readability; professional for evening or low-light use. */
+[data-theme="onyx"] {
+  --background: #0c0c0e;
+  --foreground: #fafafa;
+  --surface: #18181b;
+  --surface-border: #2d2d31;
+  --text-primary: #f4f4f5;
+  --text-secondary: #b4b4be;
+  --text-muted: #888892;
+  --border: #2d2d31;
+  --ring: rgba(255, 255, 255, 0.12);
+  --btn-primary-bg: #f4f4f5;
+  --btn-primary-text: #09090b;
+  --btn-primary-hover: #e4e4e7;
+  --btn-secondary-bg: #18181b;
+  --btn-secondary-border: #2d2d31;
+  --btn-secondary-text: #b4b4be;
+  --btn-secondary-hover: #2d2d31;
+  --input-bg: #18181b;
+  --input-border: #2d2d31;
+  --input-text: #f4f4f5;
+  --input-placeholder: #888892;
+  --nav-active-bg: #f4f4f5;
+  --nav-active-text: #09090b;
+  --nav-hover-bg: #2d2d31;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.2);
+  --badge-success-bg: rgba(16, 185, 129, 0.2);
+  --badge-success-text: #34d399;
+  --badge-warning-bg: rgba(245, 158, 11, 0.2);
+  --badge-warning-text: #fbbf24;
+  --badge-neutral-bg: rgba(255, 255, 255, 0.12);
+  --badge-neutral-text: #b4b4be;
+  --muted-bg: #2d2d31;
 }
 
 @theme inline {
@@ -10,17 +117,117 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --radius-sm: 8px;
+  --radius-default: var(--radius);
+  --radius-lg: var(--radius-lg);
+  --radius-xl: var(--radius-xl);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-feature-settings: "rlig" 1, "calt" 1;
+}
+
+input:focus-visible,
+button:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+/* Themed selects: remove native dropdown look, use theme colors */
+select {
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+  padding-right: 2.25rem;
+}
+
+/* Dropdown list (options) use theme background and text */
+option {
+  background: var(--input-bg);
+  color: var(--input-text);
+}
+
+/* Themed checkboxes: use app colors instead of generic browser look */
+input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid var(--input-border);
+  border-radius: 6px;
+  background: var(--input-bg);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+input[type="checkbox"]:hover {
+  border-color: var(--text-muted);
+}
+
+input[type="checkbox"]:checked {
+  background: var(--btn-primary-bg);
+  border-color: var(--btn-primary-bg);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12l5 5L20 7'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 0.75rem;
+}
+
+[data-theme="onyx"] input[type="checkbox"]:checked {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2309090b' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12l5 5L20 7'/%3E%3C/svg%3E");
+}
+
+input[type="checkbox"]:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+/* Subtle fade when navigating between pages */
+@keyframes page-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-page-fade-in {
+  animation: page-fade-in 0.28s ease-out backwards;
+}
+
+/* Toast notifications: top-right, theme-aware (Slate-style surface/border) */
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes toast-out {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+}
+
+.toast-item {
+  animation: toast-in 0.3s ease-out;
+}
+
+.toast-item.toast-exit {
+  animation: toast-out 0.25s ease-in forwards;
 }
