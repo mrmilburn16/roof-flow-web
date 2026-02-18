@@ -54,3 +54,8 @@ export function setSlackChannelMemory(channelId: string, channelName: string): v
     memoryStore.set(key(), { ...existing, channelId, channelName });
   }
 }
+
+/** Clear in-memory Slack config (used when disconnecting). */
+export function clearSlackConfigMemory(): void {
+  memoryStore.delete(key());
+}

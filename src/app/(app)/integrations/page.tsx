@@ -102,6 +102,7 @@ function IntegrationsContent() {
   const [newChannelName, setNewChannelName] = useState("");
   const [creatingChannel, setCreatingChannel] = useState(false);
   const [setChannelLoadingId, setSetChannelLoadingId] = useState<string | null>(null);
+  const [disconnectLoading, setDisconnectLoading] = useState(false);
   const [message, setMessage] = useState<"connected" | "error" | null>(null);
   const [playConnectedAnimation, setPlayConnectedAnimation] = useState(false);
   const connectedAnimatedRef = useRef(false);
@@ -184,6 +185,21 @@ function IntegrationsContent() {
       if (res.ok && slackStatus) setSlackStatus({ ...slackStatus, channelId, channelName });
     } finally {
       setSetChannelLoadingId(null);
+    }
+  };
+
+  const disconnectSlack = async () => {
+    if (disconnectLoading) return;
+    setDisconnectLoading(true);
+    try {
+      const res = await fetch("/api/slack/disconnect", { method: "POST" });
+      if (res.ok) {
+        setCachedSlackStatus({ connected: false, channelId: null, channelName: null });
+        setSlackStatus({ connected: false, channelId: null, channelName: null });
+        setSlackChannels(null);
+      }
+    } finally {
+      setDisconnectLoading(false);
     }
   };
 
@@ -282,14 +298,24 @@ function IntegrationsContent() {
               <div className="flex flex-wrap items-center gap-2">
                 <h3 className="text-[18px] font-semibold text-[var(--text-primary)]">Slack</h3>
                 {showAsConnected && (
-                  <span
-                    className={`inline-flex items-center gap-1 rounded-full bg-[var(--badge-success-bg)] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-[var(--badge-success-text)] ${playConnectedAnimation ? "slack-connected-celebrate" : ""}`}
-                    aria-live="polite"
-                    aria-label="Slack connected"
-                  >
-                    <Check className="size-3.5" strokeWidth={2.5} aria-hidden />
-                    Connected
-                  </span>
+                  <>
+                    <span
+                      className={`inline-flex items-center gap-1 rounded-full bg-[var(--badge-success-bg)] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-[var(--badge-success-text)] ${playConnectedAnimation ? "slack-connected-celebrate" : ""}`}
+                      aria-live="polite"
+                      aria-label="Slack connected"
+                    >
+                      <Check className="size-3.5" strokeWidth={2.5} aria-hidden />
+                      Connected
+                    </span>
+                    <button
+                      type="button"
+                      onClick={disconnectSlack}
+                      disabled={disconnectLoading}
+                      className="text-[13px] text-[var(--text-muted)] underline hover:text-[var(--text-secondary)] disabled:opacity-50"
+                    >
+                      {disconnectLoading ? "Disconnecting…" : "Disconnect"}
+                    </button>
+                  </>
                 )}
               </div>
               <p className="mt-2 text-[14px] leading-relaxed text-[var(--helper-text)]">

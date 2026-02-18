@@ -82,12 +82,14 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: true });
   }
   if (event.channel !== channelId) {
+    console.warn("[Slack events] Channel mismatch — message is from channel", event.channel, "but to-do channel is", channelId, "— in Integrations, select the channel where you’re posting.");
     return NextResponse.json({ ok: true });
   }
 
   const channelName = config?.channelName ?? "";
   const slackTeamId = config?.slackTeamId ?? "";
   if (slackTeamId && payload.team_id !== slackTeamId) {
+    console.warn("[Slack events] Team mismatch — event team_id", payload.team_id, "vs config", slackTeamId);
     return NextResponse.json({ ok: true });
   }
 
@@ -100,7 +102,12 @@ export async function POST(request: NextRequest) {
     .where("sourceMeta.slackMessageTs", "==", event.ts)
     .limit(1)
     .get();
-  if (!existingSnap.empty) return NextResponse.json({ ok: true });
+  if (!existingSnap.empty) {
+    console.info("[Slack events] Skipping duplicate message", event.ts);
+    return NextResponse.json({ ok: true });
+  }
+
+  console.info("[Slack events] Creating to-do for channel", event.channel, "title:", text.slice(0, 50));
 
   const userRes = await fetch(`https://slack.com/api/users.info?user=${event.user}`, {
     headers: { Authorization: `Bearer ${token}` },

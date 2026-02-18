@@ -123,7 +123,15 @@ If you post in the channel but the to-do doesn’t appear in the web app, check:
    Integrations → the same channel must be chosen in the “Select channel” dropdown. Only that channel is used for to-dos.
 
 2. **App is in the channel**  
-   In Slack, open that channel → **Integrations** (or the channel name) → **Add apps** → add your Roof Flow app. If the app isn’t in the channel, Slack won’t send message events.
+   The Roof Flow app must be added to the channel or Slack won’t send message events. Exact steps:
+   - In Slack, open the channel where you want to-dos to come from.
+   - Click the **channel name** at the top.
+   - Right‑click → **View channel details** (or use the channel name menu).
+   - Open the **Integrations** tab.
+   - Click **Add an app**.
+   - Find **Roof Flow** and click **Add** next to it.
+   
+   If the app isn’t in the channel, you won’t see `[Slack events] Request received` in Vercel logs when you post.
 
 3. **Slack Event Subscriptions**  
    In [api.slack.com/apps](https://api.slack.com/apps) → your app → **Event Subscriptions**:  
@@ -148,4 +156,4 @@ If you post in the channel but the to-do doesn’t appear in the web app, check:
 To remove the Slack integration or the test channel:
 
 - In Slack: archive or delete the channel from the channel settings.
-- In Roof Flow: Integrations does not currently support "Disconnect Slack"; to clear the connection you would remove or clear the `config/slack` document in Firestore for your team (or add a "Disconnect" action later).
+- In Roof Flow: Integrations → Slack → click **Disconnect** to remove the connection. You can connect again anytime.
