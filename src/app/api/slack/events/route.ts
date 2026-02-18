@@ -46,8 +46,14 @@ export async function POST(request: NextRequest) {
   }
 
   const signature = request.headers.get("x-slack-signature") ?? null;
-  if (!SLACK_SIGNING_SECRET || !verifySlackRequest(rawBody, signature, SLACK_SIGNING_SECRET)) {
-    console.info("[Slack events] Rejected: invalid or missing signature (check SLACK_SIGNING_SECRET)");
+  const timestamp = request.headers.get("x-slack-request-timestamp") ?? null;
+  const secretSet = Boolean(SLACK_SIGNING_SECRET?.trim());
+  const secretLen = SLACK_SIGNING_SECRET?.trim().length ?? 0;
+  if (!SLACK_SIGNING_SECRET || !verifySlackRequest(rawBody, signature, timestamp, SLACK_SIGNING_SECRET)) {
+    console.info(
+      "[Slack events] Rejected: invalid or missing signature. In Vercel, set SLACK_SIGNING_SECRET to the exact Signing Secret from Slack (api.slack.com/apps → your app → Basic Information → App Credentials → Signing Secret). No quotes or extra spaces.",
+      { secretSet, secretLen, timestampPresent: Boolean(timestamp) }
+    );
     return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
   }
 
