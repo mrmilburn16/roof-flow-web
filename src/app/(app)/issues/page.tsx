@@ -1,10 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useRef, useEffect } from "react";
 import { Plus, AlertCircle, Play, CheckCircle, RotateCcw, Search } from "lucide-react";
 import { useMockDb } from "@/lib/mock/MockDbProvider";
+import { useToast } from "@/lib/toast/ToastProvider";
 import { PageTitle, card, inputBase, btnPrimary, btnSecondary } from "@/components/ui";
+import { EmptyState } from "@/components/EmptyState";
 
 function formatCreated(iso: string): string {
   const d = new Date(iso);
@@ -26,8 +28,21 @@ const RECENT_RESOLVED_COUNT = 8;
 
 export default function IssuesPage() {
   const { db, createIssue, resolveIssue, reopenIssue } = useMockDb();
+  const { toast } = useToast();
+  const [modalOpen, setModalOpen] = useState(false);
   const [title, setTitle] = useState("");
+  const [notes, setNotes] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+  const titleRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (modalOpen) {
+      setTitle("");
+      setNotes("");
+      const t = setTimeout(() => titleRef.current?.focus(), 50);
+      return () => clearTimeout(t);
+    }
+  }, [modalOpen]);
 
   const openIssues = useMemo(() => {
     return db.issues
@@ -80,33 +95,84 @@ export default function IssuesPage() {
                 )}
               </div>
             </div>
-            <form
-              className="flex items-center gap-2"
-              onSubmit={(e) => {
-                e.preventDefault();
-                const trimmed = title.trim();
-                if (!trimmed) return;
-                createIssue(trimmed);
-                setTitle("");
-              }}
+            <button
+              type="button"
+              onClick={() => setModalOpen(true)}
+              className={btnPrimary + " inline-flex gap-2"}
             >
-              <input
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="New issue"
-                className={`${inputBase} w-full min-w-0 sm:w-64`}
-                aria-label="New issue title"
-              />
-              <button
-                type="submit"
-                className={`${btnPrimary} shrink-0`}
-                disabled={!title.trim()}
-              >
-                <Plus className="size-4" />
-                Add
-              </button>
-            </form>
+              <Plus className="size-4" />
+              Add issue
+            </button>
           </div>
+
+          {modalOpen && (
+            <div
+              className="fixed inset-0 z-50 flex items-center justify-center p-4"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="add-issue-title"
+            >
+              <div className="absolute inset-0 bg-black/50" onClick={() => setModalOpen(false)} aria-hidden />
+              <div
+                className="relative w-full max-w-md rounded-[var(--radius-lg)] border border-[var(--surface-border)] bg-[var(--surface)] p-6 shadow-[var(--shadow-card)]"
+                onKeyDown={(e) => e.key === "Escape" && setModalOpen(false)}
+              >
+                <h2 id="add-issue-title" className="text-[16px] font-semibold text-[var(--text-primary)]">
+                  New issue
+                </h2>
+                <p className="mt-1 text-[13px] text-[var(--text-muted)]">
+                  Something to discuss and resolve (IDS).
+                </p>
+                <form
+                  className="mt-5 space-y-4"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    const t = title.trim();
+                    if (!t) {
+                      toast("Enter a title", "info");
+                      titleRef.current?.focus();
+                      return;
+                    }
+                    createIssue(t, notes.trim() || undefined);
+                    setModalOpen(false);
+                    toast("Issue added", "success");
+                  }}
+                >
+                  <div>
+                    <label className="mb-1 block text-[12px] font-medium text-[var(--text-secondary)]">Title</label>
+                    <input
+                      ref={titleRef}
+                      type="text"
+                      value={title}
+                      onChange={(e) => setTitle(e.target.value)}
+                      placeholder="e.g. Install crew starting late on Tuesdays"
+                      className={inputBase + " w-full"}
+                      aria-label="Issue title"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-[12px] font-medium text-[var(--text-secondary)]">Notes (optional)</label>
+                    <textarea
+                      value={notes}
+                      onChange={(e) => setNotes(e.target.value)}
+                      placeholder="Context or root cause to discuss"
+                      rows={3}
+                      className={inputBase + " w-full resize-y"}
+                      aria-label="Issue notes"
+                    />
+                  </div>
+                  <div className="flex justify-end gap-2">
+                    <button type="button" onClick={() => setModalOpen(false)} className={btnSecondary}>
+                      Cancel
+                    </button>
+                    <button type="submit" className={btnPrimary}>
+                      Add issue
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
           {openIssues.length > 0 && (
             <div className="flex items-center gap-2">
               <Search className="size-4 shrink-0 text-[var(--text-muted)]" />
@@ -124,16 +190,18 @@ export default function IssuesPage() {
 
         <div className="divide-y divide-[var(--border)]">
           {openIssues.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-center">
-              <div className="flex size-12 items-center justify-center rounded-full bg-[var(--muted-bg)]">
-                <AlertCircle className="size-6 text-[var(--text-muted)]" />
-              </div>
-              <p className="mt-4 text-[14px] font-medium text-[var(--text-primary)]">
-                No open issues
-              </p>
-              <p className="mt-1 text-[13px] text-[var(--text-muted)]">
-                Add one above or capture them during the meeting.
-              </p>
+            <div className="px-5">
+              <EmptyState
+                icon={AlertCircle}
+                title="No open issues"
+                description="Click “Add issue” above or capture them during the meeting."
+                action={
+                  <button type="button" onClick={() => setModalOpen(true)} className={btnPrimary + " inline-flex gap-2"}>
+                    <Plus className="size-4" />
+                    Add issue
+                  </button>
+                }
+              />
             </div>
           ) : filteredOpenIssues.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">

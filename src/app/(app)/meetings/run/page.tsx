@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, useCallback, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import type { MeetingSectionKind } from "@/lib/domain";
 import { Plus, Copy, Check, Square } from "lucide-react";
 import { useMockDb } from "@/lib/mock/MockDbProvider";
@@ -46,6 +47,8 @@ const sectionLabels: Record<MeetingSectionKind, string> = {
 };
 
 export default function MeetingRunPage() {
+  const searchParams = useSearchParams();
+  const templateIdFromUrl = searchParams.get("template");
   const {
     db,
     weekOf,
@@ -57,11 +60,15 @@ export default function MeetingRunPage() {
     upsertKpiEntry,
     setMeetingNotes,
     setMeetingFeedback,
+    getMeetingTemplate,
   } = useMockDb();
   const meetingNotes = db.meetingNotes;
   const existingFeedback = db.meetingFeedback?.[weekOf];
 
-  const template = db.meetingTemplates[0];
+  const template = useMemo(
+    () => getMeetingTemplate(templateIdFromUrl ?? undefined) ?? db.meetingTemplates[0],
+    [getMeetingTemplate, templateIdFromUrl, db.meetingTemplates],
+  );
   const order = template?.sections?.map((s) => s.kind) ?? [];
   const sectionDurations = useMemo(() => {
     const map = new Map<MeetingSectionKind, number>();
@@ -478,7 +485,7 @@ export default function MeetingRunPage() {
               value={meetingNotes}
               onChange={(e) => setMeetingNotes(e.target.value)}
               placeholder="Capture decisions, context, and takeaways here…"
-              className={`${inputBase} min-h-[320px] resize-y`}
+              className={`${inputBase} min-h-[320px] resize-y outline-none transition-none focus:border-[var(--input-border)]`}
             />
             <p className="mt-2 text-[12px] text-[var(--text-muted)]">
               Notes stored per meeting once Firestore is connected.

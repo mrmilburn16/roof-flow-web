@@ -6,14 +6,14 @@ const cardHeader = "text-[13px] font-medium tracking-[-0.01em] text-[var(--text-
 const cardValue = "mt-1 text-[15px] font-semibold tracking-[-0.02em] text-[var(--text-primary)]";
 
 const btnPrimary =
-  "inline-flex items-center justify-center gap-2 rounded-[var(--radius)] bg-[var(--btn-primary-bg)] px-4 py-2.5 text-[13px] font-medium text-[var(--btn-primary-text)] transition hover:opacity-90 active:scale-[0.98]";
+  "inline-flex items-center justify-center gap-2 rounded-[var(--radius)] bg-[var(--btn-primary-bg)] px-3 py-2.5 text-[13px] font-medium text-[var(--btn-primary-text)] transition hover:opacity-90 active:scale-[0.98]";
 
 const btnSecondary =
-  "inline-flex items-center justify-center gap-2 rounded-[var(--radius)] border border-[var(--btn-secondary-border)] bg-[var(--btn-secondary-bg)] px-4 py-2.5 text-[13px] font-medium text-[var(--btn-secondary-text)] transition hover:bg-[var(--btn-secondary-hover)] active:scale-[0.98]";
+  "inline-flex items-center justify-center gap-2 rounded-[var(--radius)] border border-[var(--btn-secondary-border)] bg-[var(--btn-secondary-bg)] px-3 py-2.5 text-[13px] font-medium text-[var(--btn-secondary-text)] transition hover:bg-[var(--btn-secondary-hover)] active:scale-[0.98]";
 
 /** Active state for goal status buttons: use badge colors so selected option is obvious */
 const goalStatusButtonBase =
-  "inline-flex items-center justify-center gap-2 rounded-[var(--radius)] border px-4 py-2.5 text-[13px] font-medium transition active:scale-[0.98]";
+  "inline-flex items-center justify-center gap-2 rounded-[var(--radius)] border px-3 py-2.5 text-[13px] font-medium transition active:scale-[0.98]";
 const goalStatusActive = {
   onTrack: "border-[var(--badge-success-text)] bg-[var(--goal-btn-on-bg)] text-[var(--badge-success-text)]",
   offTrack: "border-[var(--badge-warning-text)] bg-[var(--goal-btn-off-bg)] text-[var(--badge-warning-text)]",

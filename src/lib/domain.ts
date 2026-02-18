@@ -19,11 +19,25 @@ export type Role = {
   createdAt: string; // ISO
 };
 
+/** Avatar style when not using a custom upload */
+export type AvatarStyle = "initials" | "icon";
+
+/** One of five preset colors for initials/icon avatar */
+export type AvatarColor = "grey" | "blue" | "green" | "amber" | "violet";
+
 export type User = {
   id: string;
   name: string;
   initials: string;
   roleId: string;
+  /** Email for sign-in and invite. Optional until invite/sign-in is used. */
+  email?: string;
+  /** Custom photo URL (data URL or storage URL). When set, overrides style/color. */
+  avatarUrl?: string;
+  /** When no avatarUrl: show initials or generic person icon */
+  avatarStyle?: AvatarStyle;
+  /** When no avatarUrl: which of the 5 colors to use for the circle */
+  avatarColor?: AvatarColor;
 };
 
 export type TodoStatus = "open" | "done";

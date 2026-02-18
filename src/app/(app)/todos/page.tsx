@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState, useRef } from "react";
+import { useMemo, useState, useRef, useEffect } from "react";
 import { Plus, CheckSquare, Square, Play, User, RotateCcw } from "lucide-react";
 import { useMockDb } from "@/lib/mock/MockDbProvider";
 import { useToast } from "@/lib/toast/ToastProvider";
 import { PageTitle, card, inputBase, btnPrimary, btnSecondary } from "@/components/ui";
+import { EmptyState } from "@/components/EmptyState";
 
 function ordinal(n: number): string {
   const s = n % 100;
@@ -45,8 +46,17 @@ const RECENT_DONE_COUNT = 10;
 export default function TodosPage() {
   const { db, createTodo, toggleTodo } = useMockDb();
   const { toast } = useToast();
+  const [modalOpen, setModalOpen] = useState(false);
   const [title, setTitle] = useState("");
-  const inputRef = useRef<HTMLInputElement>(null);
+  const modalInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (modalOpen) {
+      setTitle("");
+      const t = setTimeout(() => modalInputRef.current?.focus(), 50);
+      return () => clearTimeout(t);
+    }
+  }, [modalOpen]);
 
   const openTodos = useMemo(() => {
     const open = db.todos.filter((t) => t.status === "open");
@@ -111,48 +121,95 @@ export default function TodosPage() {
               )}
             </div>
           </div>
-          <form
-            className="flex items-center gap-2"
-            onSubmit={(e) => {
-              e.preventDefault();
-              const trimmed = title.trim();
-              if (!trimmed) {
-                toast("Enter a to-do title", "info");
-                inputRef.current?.focus();
-                return;
-              }
-              createTodo(trimmed);
-              setTitle("");
-              inputRef.current?.focus();
-            }}
+          <button
+            type="button"
+            onClick={() => setModalOpen(true)}
+            className={btnPrimary + " inline-flex gap-2"}
           >
-            <input
-              ref={inputRef}
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="New To-Do"
-              className={`${inputBase} w-full min-w-0 sm:w-64`}
-              aria-label="New to-do title"
-            />
-            <button type="submit" className={`${btnPrimary} shrink-0`}>
-              <Plus className="size-4" />
-              Add
-            </button>
-          </form>
+            <Plus className="size-4" />
+            Add to-do
+          </button>
         </div>
+
+        {modalOpen && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="add-todo-title"
+          >
+            <div
+              className="absolute inset-0 bg-black/50"
+              onClick={() => setModalOpen(false)}
+              aria-hidden
+            />
+            <div
+              className="relative w-full max-w-md rounded-[var(--radius-lg)] border border-[var(--surface-border)] bg-[var(--surface)] p-6 shadow-[var(--shadow-card)]"
+              onKeyDown={(e) => {
+                if (e.key === "Escape") setModalOpen(false);
+              }}
+            >
+              <h2 id="add-todo-title" className="text-[16px] font-semibold text-[var(--text-primary)]">
+                New to-do
+              </h2>
+              <p className="mt-1 text-[13px] text-[var(--text-muted)]">
+                What needs to get done?
+              </p>
+              <form
+                className="mt-5 space-y-4"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  const trimmed = title.trim();
+                  if (!trimmed) {
+                    toast("Enter a to-do title", "info");
+                    modalInputRef.current?.focus();
+                    return;
+                  }
+                  createTodo(trimmed);
+                  setModalOpen(false);
+                  toast("To-do added", "success");
+                }}
+              >
+                <input
+                  ref={modalInputRef}
+                  type="text"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="e.g. Confirm supplier pricing"
+                  className={inputBase + " w-full"}
+                  aria-label="To-do title"
+                />
+                <div className="flex justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setModalOpen(false)}
+                    className={btnSecondary}
+                  >
+                    Cancel
+                  </button>
+                  <button type="submit" className={btnPrimary}>
+                    Add to-do
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
 
         <div className="divide-y divide-[var(--border)]">
           {openTodos.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-center">
-              <div className="flex size-12 items-center justify-center rounded-full bg-[var(--muted-bg)]">
-                <Square className="size-6 text-[var(--text-muted)]" />
-              </div>
-              <p className="mt-4 text-[14px] font-medium text-[var(--text-primary)]">
-                No open To-Dos
-              </p>
-              <p className="mt-1 text-[13px] text-[var(--text-muted)]">
-                Add one above or capture them during the meeting.
-              </p>
+            <div className="px-5">
+              <EmptyState
+                icon={Square}
+                title="No open To-Dos"
+                description="Click “Add to-do” above or capture items during the meeting."
+                action={
+                  <button type="button" onClick={() => setModalOpen(true)} className={btnPrimary + " inline-flex gap-2"}>
+                    <Plus className="size-4" />
+                    Add to-do
+                  </button>
+                }
+              />
             </div>
           ) : (
             openTodos.map((t) => {

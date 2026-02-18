@@ -16,11 +16,15 @@ export default function VisionPage() {
   const [newValue, setNewValue] = useState("");
   const [saved, setSaved] = useState(false);
 
+  const visionPurpose = vision.purpose;
+  const visionFocus = vision.focus;
+  const visionCoreValuesKey = JSON.stringify(vision.coreValues ?? []);
+
   useEffect(() => {
-    setPurpose(vision.purpose);
-    setCoreValues(vision.coreValues ?? []);
-    setFocus(vision.focus);
-  }, [vision.purpose, vision.focus, vision.coreValues]);
+    setPurpose(visionPurpose);
+    setCoreValues(JSON.parse(visionCoreValuesKey) as string[]);
+    setFocus(visionFocus);
+  }, [visionPurpose, visionFocus, visionCoreValuesKey]);
 
   const handleSave = useCallback(() => {
     setVision({ purpose, coreValues, focus });

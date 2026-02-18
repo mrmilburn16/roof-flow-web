@@ -2,10 +2,12 @@
 
 import Link from "next/link";
 import { useMemo, useState, useRef, useEffect } from "react";
-import { TrendingUp, Calendar, Play, ChevronDown, Check } from "lucide-react";
+import { TrendingUp, Calendar, Play, ChevronDown, Check, Plus, Pencil, Trash2 } from "lucide-react";
 import { useMockDb } from "@/lib/mock/MockDbProvider";
 import { startOfWeek } from "@/lib/mock/mockData";
+import { useToast } from "@/lib/toast/ToastProvider";
 import { PageTitle, card, inputBase, btnPrimary, btnSecondary, StatusBadge } from "@/components/ui";
+import { EmptyState } from "@/components/EmptyState";
 
 function isoDateOnly(d: Date) {
   return d.toISOString().slice(0, 10);
@@ -27,13 +29,24 @@ function formatValue(value: number, unit: string) {
 }
 
 const WEEK_OPTIONS_COUNT = 4;
+const UNIT_OPTIONS = ["count", "$", "%"];
 
 export default function ScorecardPage() {
-  const { db, weekOf: currentWeekOf, upsertKpiEntry } = useMockDb();
+  const { db, weekOf: currentWeekOf, upsertKpiEntry, createKpi, updateKpi, deleteKpi, hasPermission } = useMockDb();
+  const { toast } = useToast();
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [selectedWeekOf, setSelectedWeekOf] = useState(currentWeekOf);
   const [weekDropdownOpen, setWeekDropdownOpen] = useState(false);
+  const [kpiModalOpen, setKpiModalOpen] = useState(false);
+  const [editingKpiId, setEditingKpiId] = useState<string | null>(null);
+  const [kpiTitle, setKpiTitle] = useState("");
+  const [kpiGoal, setKpiGoal] = useState("");
+  const [kpiUnit, setKpiUnit] = useState("count");
+  const [kpiOwnerId, setKpiOwnerId] = useState("");
   const weekDropdownRef = useRef<HTMLDivElement>(null);
+  const titleRef = useRef<HTMLInputElement>(null);
+
+  const canEditKpis = hasPermission("edit_scorecard");
 
   useEffect(() => {
     if (!weekDropdownOpen) return;
@@ -94,6 +107,56 @@ export default function ScorecardPage() {
     setDrafts((p) => ({ ...p, [kpiId]: "" }));
   };
 
+  function openAddKpiModal() {
+    setEditingKpiId(null);
+    setKpiTitle("");
+    setKpiGoal("");
+    setKpiUnit("count");
+    setKpiOwnerId(db.users[0]?.id ?? "");
+    setKpiModalOpen(true);
+    setTimeout(() => titleRef.current?.focus(), 50);
+  }
+
+  function openEditKpiModal(k: { id: string; title: string; goal: number; unit: string; ownerId: string }) {
+    setEditingKpiId(k.id);
+    setKpiTitle(k.title);
+    setKpiGoal(String(k.goal));
+    setKpiUnit(k.unit);
+    setKpiOwnerId(k.ownerId);
+    setKpiModalOpen(true);
+    setTimeout(() => titleRef.current?.focus(), 50);
+  }
+
+  function handleSaveKpiModal() {
+    const title = kpiTitle.trim();
+    if (!title) {
+      toast("Enter a KPI title", "info");
+      titleRef.current?.focus();
+      return;
+    }
+    const goal = Number(kpiGoal);
+    if (!Number.isFinite(goal) || goal < 0) {
+      toast("Enter a valid goal number", "info");
+      return;
+    }
+    if (editingKpiId) {
+      updateKpi(editingKpiId, { title, goal, unit: kpiUnit, ownerId: kpiOwnerId || undefined });
+      toast("KPI updated", "success");
+    } else {
+      createKpi({ title, goal, unit: kpiUnit, ownerId: kpiOwnerId || db.users[0]?.id || "u_me" });
+      toast("KPI added", "success");
+    }
+    setKpiModalOpen(false);
+  }
+
+  function handleDeleteKpi() {
+    if (!editingKpiId) return;
+    if (!confirm("Delete this KPI? All weekly values will be removed.")) return;
+    deleteKpi(editingKpiId);
+    toast("KPI removed", "success");
+    setKpiModalOpen(false);
+  }
+
   return (
     <div className="space-y-8">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -101,23 +164,33 @@ export default function ScorecardPage() {
           title="Scorecard"
           subtitle="Track weekly KPIs. Owners update before the meeting."
         />
-        <Link href="/meetings/run" className={btnSecondary + " inline-flex gap-2"}>
-          <Play className="size-4" />
-          Run meeting
-        </Link>
+        <div className="flex flex-wrap items-center gap-2">
+          {canEditKpis && (
+            <button type="button" onClick={openAddKpiModal} className={btnPrimary + " inline-flex gap-2"}>
+              <Plus className="size-4" />
+              Add KPI
+            </button>
+          )}
+          <Link href="/meetings/run" className={btnSecondary + " inline-flex gap-2"}>
+            <Play className="size-4" />
+            Run meeting
+          </Link>
+        </div>
       </div>
 
       {kpis.length === 0 ? (
-        <div className={card + " p-10 text-center"}>
-          <div className="mx-auto flex size-12 items-center justify-center rounded-full bg-[var(--muted-bg)]">
-            <TrendingUp className="size-6 text-[var(--text-muted)]" />
-          </div>
-          <p className="mt-4 text-[15px] font-medium text-[var(--text-primary)]">
-            No KPIs yet
-          </p>
-          <p className="mt-1 text-[14px] text-[var(--text-muted)]">
-            Add scorecard items in settings or seed starter data.
-          </p>
+        <div className={card + " p-10"}>
+          <EmptyState
+            icon={TrendingUp}
+            title="No KPIs yet"
+            description={canEditKpis ? "Add KPIs to track weekly numbers." : "Add scorecard items in settings or seed starter data."}
+            action={canEditKpis ? (
+              <button type="button" onClick={openAddKpiModal} className={btnPrimary + " inline-flex gap-2"}>
+                <Plus className="size-4" />
+                Add KPI
+              </button>
+            ) : undefined}
+          />
         </div>
       ) : (
         <div className={card}>
@@ -227,8 +300,20 @@ export default function ScorecardPage() {
                     className="grid min-w-[640px] grid-cols-[1fr_100px_100px_180px] items-center gap-4 px-5 py-4"
                   >
                     <div className="min-w-0">
-                      <div className="text-[14px] font-medium text-[var(--text-primary)]">
-                        {k.title}
+                      <div className="flex items-center gap-2">
+                        <span className="text-[14px] font-medium text-[var(--text-primary)]">
+                          {k.title}
+                        </span>
+                        {canEditKpis && (
+                          <button
+                            type="button"
+                            onClick={() => openEditKpiModal(k)}
+                            className="rounded-[var(--radius)] p-1.5 text-[var(--text-muted)] hover:bg-[var(--nav-hover-bg)] hover:text-[var(--text-primary)]"
+                            aria-label={`Edit ${k.title}`}
+                          >
+                            <Pencil className="size-3.5" />
+                          </button>
+                        )}
                       </div>
                       <div className="mt-1 flex flex-wrap items-center gap-2">
                         <StatusBadge status={status} label={label} />
@@ -270,6 +355,100 @@ export default function ScorecardPage() {
                 );
               })}
             </div>
+          </div>
+        </div>
+      )}
+
+      {kpiModalOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="kpi-modal-title"
+        >
+          <div className="absolute inset-0 bg-black/50" onClick={() => setKpiModalOpen(false)} aria-hidden />
+          <div
+            className="relative w-full max-w-md rounded-[var(--radius-lg)] border border-[var(--surface-border)] bg-[var(--surface)] p-6 shadow-[var(--shadow-card)]"
+            onKeyDown={(e) => e.key === "Escape" && setKpiModalOpen(false)}
+          >
+            <h2 id="kpi-modal-title" className="text-[16px] font-semibold text-[var(--text-primary)]">
+              {editingKpiId ? "Edit KPI" : "Add KPI"}
+            </h2>
+            <form
+              className="mt-5 space-y-4"
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleSaveKpiModal();
+              }}
+            >
+              <div>
+                <label className="mb-1 block text-[12px] font-medium text-[var(--text-secondary)]">Title</label>
+                <input
+                  ref={titleRef}
+                  type="text"
+                  value={kpiTitle}
+                  onChange={(e) => setKpiTitle(e.target.value)}
+                  placeholder="e.g. Leads received"
+                  className={inputBase + " w-full"}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="mb-1 block text-[12px] font-medium text-[var(--text-secondary)]">Goal</label>
+                  <input
+                    type="number"
+                    min={0}
+                    step="any"
+                    value={kpiGoal}
+                    onChange={(e) => setKpiGoal(e.target.value)}
+                    placeholder="0"
+                    className={inputBase + " w-full"}
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-[12px] font-medium text-[var(--text-secondary)]">Unit</label>
+                  <select
+                    value={kpiUnit}
+                    onChange={(e) => setKpiUnit(e.target.value)}
+                    className={inputBase + " w-full"}
+                  >
+                    {UNIT_OPTIONS.map((u) => (
+                      <option key={u} value={u}>{u === "$" ? "Dollars ($)" : u === "%" ? "Percent (%)" : "Count"}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="mb-1 block text-[12px] font-medium text-[var(--text-secondary)]">Owner</label>
+                <select
+                  value={kpiOwnerId}
+                  onChange={(e) => setKpiOwnerId(e.target.value)}
+                  className={inputBase + " w-full"}
+                >
+                  {db.users.map((u) => (
+                    <option key={u.id} value={u.id}>{u.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                {editingKpiId && (
+                  <button
+                    type="button"
+                    onClick={handleDeleteKpi}
+                    className="inline-flex items-center gap-2 rounded-[var(--radius)] border border-[var(--badge-warning-text)] px-4 py-2.5 text-[13px] font-medium text-[var(--badge-warning-text)] hover:bg-[var(--badge-warning-bg)]"
+                  >
+                    <Trash2 className="size-4" />
+                    Delete
+                  </button>
+                )}
+                <button type="button" onClick={() => setKpiModalOpen(false)} className={btnSecondary}>
+                  Cancel
+                </button>
+                <button type="submit" className={btnPrimary}>
+                  {editingKpiId ? "Save changes" : "Add KPI"}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

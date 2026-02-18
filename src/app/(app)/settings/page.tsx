@@ -7,7 +7,9 @@ import { Settings, Palette, Database, Zap, Shield } from "lucide-react";
 import { createInitialMockDb, startOfWeek } from "@/lib/mock/mockData";
 import { getFirebaseDb, isFirebaseConfigured } from "@/lib/firebase/client";
 import { useAuth } from "@/lib/auth/AuthProvider";
-import { PageTitle, card, btnPrimary, StatusBadge } from "@/components/ui";
+import { useTheme } from "@/lib/theme/ThemeProvider";
+import { THEMES } from "@/lib/theme/ThemeProvider";
+import { PageTitle, card, btnPrimary, StatusBadge, inputBase } from "@/components/ui";
 
 export default function SettingsPage() {
   const firestore = getFirebaseDb();
@@ -17,6 +19,7 @@ export default function SettingsPage() {
   const authEnabled = process.env.NEXT_PUBLIC_USE_FIREBASE_AUTH === "true";
   const useFirestore = process.env.NEXT_PUBLIC_USE_FIRESTORE === "true";
   const { user } = useAuth();
+  const { theme, setTheme } = useTheme();
 
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
@@ -148,9 +151,21 @@ export default function SettingsPage() {
                   Theme
                 </div>
                 <p className="mt-0.5 text-[13px] text-[var(--text-muted)]">
-                  Change theme (Slate, Onyx, Dawn) in the sidebar.
+                  App appearance. You can also change it in the sidebar.
                 </p>
               </div>
+              <select
+                value={theme}
+                onChange={(e) => setTheme(e.target.value as "dawn" | "slate" | "onyx")}
+                className={inputBase + " min-w-[140px] capitalize"}
+                aria-label="Theme"
+              >
+                {THEMES.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.label} — {t.description}
+                  </option>
+                ))}
+              </select>
             </div>
             {authEnabled && user && (
               <div className="rounded-[var(--radius)] border border-[var(--border)] bg-[var(--muted-bg)] px-4 py-3">

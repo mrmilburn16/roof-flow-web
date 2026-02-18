@@ -22,15 +22,24 @@ const sectionLabels: Record<MeetingSectionKind, string> = {
 };
 
 export default function MeetingsPage() {
-  const { db, weekOf, hasPermission, getMeetingRunStatus, setMeetingRunStatus, getMeetingRatingsAverage } = useMockDb();
+  const { db, weekOf, hasPermission, getMeetingRunStatus, setMeetingRunStatus, getMeetingRatingsAverage, getMeetingTemplate } = useMockDb();
   const meetingRatingAvg = getMeetingRatingsAverage();
-  const template = db.meetingTemplates[0];
   const templates = db.meetingTemplates;
+  const [selectedTemplateId, setSelectedTemplateId] = useState(templates[0]?.id ?? "");
+  const template = getMeetingTemplate(selectedTemplateId) ?? templates[0];
   const canCancelMeeting = hasPermission("cancel_meeting");
   const meetingStatus = getMeetingRunStatus(weekOf);
   const isCanceled = meetingStatus === "canceled";
   const [showCanceledBanner, setShowCanceledBanner] = useState(isCanceled);
   const [bannerVisible, setBannerVisible] = useState(isCanceled);
+
+  useEffect(() => {
+    if (templates.length > 0 && !templates.some((t) => t.id === selectedTemplateId)) {
+      setSelectedTemplateId(templates[0].id);
+    }
+  }, [templates, selectedTemplateId]);
+
+  const runMeetingHref = template ? `/meetings/run${selectedTemplateId ? `?template=${encodeURIComponent(selectedTemplateId)}` : ""}` : "/meetings/run";
 
   useEffect(() => {
     if (isCanceled) {
@@ -100,9 +109,25 @@ export default function MeetingsPage() {
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <div className="text-[15px] font-semibold text-[var(--text-primary)]">
-                      {template?.title ?? "Weekly Meeting"}
-                    </div>
+                    {templates.length > 1 ? (
+                      <div className="flex flex-wrap items-center gap-2">
+                        <label htmlFor="meeting-template-select" className="sr-only">Meeting template</label>
+                        <select
+                          id="meeting-template-select"
+                          value={selectedTemplateId}
+                          onChange={(e) => setSelectedTemplateId(e.target.value)}
+                          className="rounded-[var(--radius)] border border-[var(--input-border)] bg-[var(--input-bg)] px-3 py-2 text-[14px] font-semibold text-[var(--text-primary)] focus:ring-2 focus:ring-[var(--ring)]"
+                        >
+                          {templates.map((t) => (
+                            <option key={t.id} value={t.id}>{t.title}</option>
+                          ))}
+                        </select>
+                      </div>
+                    ) : (
+                      <div className="text-[15px] font-semibold text-[var(--text-primary)]">
+                        {template?.title ?? "Weekly Meeting"}
+                      </div>
+                    )}
                     <div className="mt-1 flex flex-wrap items-center gap-3 text-[13px] text-[var(--text-muted)]">
                       <span className="flex items-center gap-1.5">
                         <Clock className="size-3.5" />
@@ -180,7 +205,7 @@ export default function MeetingsPage() {
                 )}
                 <div className="mt-5 flex flex-wrap gap-2">
                   {!isCanceled ? (
-                    <Link href="/meetings/run" className={btnPrimary + " inline-flex gap-2"}>
+                    <Link href={runMeetingHref} className={btnPrimary + " inline-flex gap-2"}>
                       <Play className="size-4" />
                       Run meeting
                     </Link>

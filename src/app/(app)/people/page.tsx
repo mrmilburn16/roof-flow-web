@@ -5,6 +5,7 @@ import { UserPlus, Pencil, Trash2, Lock } from "lucide-react";
 import { useMockDb } from "@/lib/mock/MockDbProvider";
 import { useToast } from "@/lib/toast/ToastProvider";
 import { PageTitle, card, btnPrimary, btnSecondary, inputBase } from "@/components/ui";
+import { Avatar } from "@/components/Avatar";
 
 export default function PeoplePage() {
   const { db, hasPermission, createUser, updateUser, deleteUser } = useMockDb();
@@ -13,16 +14,19 @@ export default function PeoplePage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [addName, setAddName] = useState("");
+  const [addEmail, setAddEmail] = useState("");
   const [addRoleId, setAddRoleId] = useState(() => db.roles.find((r) => r.name === "Owner")?.id ?? db.roles[0]?.id ?? "");
   const [editName, setEditName] = useState("");
+  const [editEmail, setEditEmail] = useState("");
   const [editRoleId, setEditRoleId] = useState("");
 
   const canManage = hasPermission("manage_team");
   const roles = db.roles;
 
-  function openEdit(user: { id: string; name: string; roleId: string }) {
+  function openEdit(user: { id: string; name: string; roleId: string; email?: string }) {
     setEditingId(user.id);
     setEditName(user.name);
+    setEditEmail(user.email ?? "");
     setEditRoleId(user.roleId);
   }
 
@@ -33,7 +37,7 @@ export default function PeoplePage() {
       toast("Name is required", "error");
       return;
     }
-    updateUser(editingId, { name, roleId: editRoleId });
+    updateUser(editingId, { name, roleId: editRoleId, email: editEmail.trim() || undefined });
     setEditingId(null);
     toast("Person updated", "success");
   }
@@ -44,8 +48,9 @@ export default function PeoplePage() {
       toast("Name is required", "error");
       return;
     }
-    createUser({ name, roleId: addRoleId });
+    createUser({ name, roleId: addRoleId, email: addEmail.trim() || undefined });
     setAddName("");
+    setAddEmail("");
     setAddRoleId(db.roles[0]?.id ?? "");
     setShowAdd(false);
     toast("Person added", "success");
@@ -97,8 +102,11 @@ export default function PeoplePage() {
         <div className={card}>
           <div className="border-b border-[var(--border)] px-5 py-4">
             <h2 className="text-[15px] font-semibold text-[var(--text-primary)]">New person</h2>
+            <p className="mt-1 text-[13px] text-[var(--text-muted)]">
+              Add their email to invite them to sign in. Invite emails can be sent once an email provider is configured.
+            </p>
           </div>
-          <div className="flex flex-wrap items-end gap-4 p-5">
+          <div className="flex flex-wrap gap-4 p-5">
             <div className="min-w-[200px] flex-1">
               <label className="mb-1 block text-[12px] font-medium text-[var(--text-secondary)]">Name</label>
               <input
@@ -108,6 +116,17 @@ export default function PeoplePage() {
                 placeholder="e.g. Jane Smith"
                 className={inputBase}
                 onKeyDown={(e) => e.key === "Enter" && handleAdd()}
+              />
+            </div>
+            <div className="min-w-[220px] flex-1">
+              <label className="mb-1 block text-[12px] font-medium text-[var(--text-secondary)]">Email (optional)</label>
+              <input
+                type="email"
+                value={addEmail}
+                onChange={(e) => setAddEmail(e.target.value)}
+                placeholder="jane@company.com"
+                className={inputBase}
+                autoComplete="email"
               />
             </div>
             <div className="min-w-[160px]">
@@ -124,7 +143,7 @@ export default function PeoplePage() {
                 ))}
               </select>
             </div>
-            <div className="flex gap-2">
+            <div className="flex shrink-0 gap-2 self-end">
               <button type="button" onClick={handleAdd} className={btnPrimary}>
                 Add
               </button>
@@ -145,12 +164,10 @@ export default function PeoplePage() {
           return (
             <div key={user.id} className={card}>
               <div className="flex flex-wrap items-center gap-4 px-5 py-4">
-                <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-[var(--muted-bg)] text-[14px] font-semibold text-[var(--text-secondary)]">
-                  {user.initials}
-                </div>
+                <Avatar user={user} size="md" />
                 {isEditing ? (
                   <>
-                    <div className="min-w-[180px] flex-1">
+                    <div className="min-w-[160px] flex-1">
                       <input
                         type="text"
                         value={editName}
@@ -158,6 +175,16 @@ export default function PeoplePage() {
                         className={inputBase}
                         placeholder="Name"
                         autoFocus
+                      />
+                    </div>
+                    <div className="min-w-[200px] flex-1">
+                      <input
+                        type="email"
+                        value={editEmail}
+                        onChange={(e) => setEditEmail(e.target.value)}
+                        className={inputBase}
+                        placeholder="Email (optional)"
+                        autoComplete="email"
                       />
                     </div>
                     <select
@@ -188,7 +215,15 @@ export default function PeoplePage() {
                   <>
                     <div className="min-w-0 flex-1">
                       <div className="font-semibold text-[var(--text-primary)]">{user.name}</div>
-                      <div className="text-[13px] text-[var(--text-muted)]">{role?.name ?? "—"}</div>
+                      <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[13px] text-[var(--text-muted)]">
+                        <span>{role?.name ?? "—"}</span>
+                        {user.email && (
+                          <>
+                            <span aria-hidden>·</span>
+                            <span className="truncate">{user.email}</span>
+                          </>
+                        )}
+                      </div>
                     </div>
                     <div className="flex items-center gap-2">
                       <button

@@ -1,11 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useRef, useEffect } from "react";
 import { Plus, Target, Play, Calendar } from "lucide-react";
 import type { GoalStatus } from "@/lib/domain";
 import { useMockDb } from "@/lib/mock/MockDbProvider";
+import { useToast } from "@/lib/toast/ToastProvider";
 import { PageTitle, card, inputBase, btnPrimary, btnSecondary, goalStatusButtonBase, goalStatusActive, StatusBadge } from "@/components/ui";
+import { EmptyState } from "@/components/EmptyState";
 
 const STATUSES: GoalStatus[] = ["onTrack", "offTrack", "done"];
 
@@ -37,7 +39,22 @@ function formatDueDate(iso: string) {
 
 export default function GoalsPage() {
   const { db, createGoal, setGoalStatus } = useMockDb();
+  const { toast } = useToast();
+  const [modalOpen, setModalOpen] = useState(false);
   const [title, setTitle] = useState("");
+  const [dueDate, setDueDate] = useState("");
+  const titleRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (modalOpen) {
+      setTitle("");
+      const q = new Date();
+      q.setDate(q.getDate() + 75);
+      setDueDate(q.toISOString().slice(0, 10));
+      const t = setTimeout(() => titleRef.current?.focus(), 50);
+      return () => clearTimeout(t);
+    }
+  }, [modalOpen]);
 
   const goals = useMemo(() => db.goals, [db.goals]);
   const userById = useMemo(() => {
@@ -59,8 +76,9 @@ export default function GoalsPage() {
   function handleAddGoal() {
     const trimmed = title.trim();
     if (!trimmed) return;
-    createGoal(trimmed);
-    setTitle("");
+    createGoal(trimmed, dueDate.trim() || undefined);
+    setModalOpen(false);
+    toast("Goal added", "success");
   }
 
   return (
@@ -77,34 +95,18 @@ export default function GoalsPage() {
       </div>
 
       {goals.length === 0 ? (
-        <div className={card + " p-10 text-center"}>
-          <div className="mx-auto flex size-12 items-center justify-center rounded-full bg-[var(--muted-bg)]">
-            <Target className="size-6 text-[var(--text-muted)]" />
-          </div>
-          <p className="mt-4 text-[15px] font-medium text-[var(--text-primary)]">
-            No goals yet
-          </p>
-          <p className="mt-1 text-[14px] text-[var(--text-muted)]">
-            Add quarterly goals (Rocks) to keep the team aligned.
-          </p>
-          <form
-            className="mx-auto mt-6 flex max-w-sm items-center gap-2"
-            onSubmit={(e) => {
-              e.preventDefault();
-              handleAddGoal();
-            }}
-          >
-            <input
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="New quarterly goal"
-              className={inputBase}
-            />
-            <button type="button" className={btnPrimary + " shrink-0"} disabled={!title.trim()} onClick={handleAddGoal}>
-              <Plus className="size-4" />
-              Add
-            </button>
-          </form>
+        <div className={card + " p-10"}>
+          <EmptyState
+            icon={Target}
+            title="No goals yet"
+            description="Add quarterly goals (Rocks) to keep the team aligned."
+            action={
+              <button type="button" onClick={() => setModalOpen(true)} className={btnPrimary + " inline-flex gap-2"}>
+                <Plus className="size-4" />
+                Add goal
+              </button>
+            }
+          />
         </div>
       ) : (
         <div className={card}>
@@ -121,30 +123,81 @@ export default function GoalsPage() {
                 <span className="font-medium text-[var(--text-muted)]">{summary.done} done</span>
               </div>
             </div>
-            <form
-              className="flex items-center gap-2"
-              onSubmit={(e) => {
-                e.preventDefault();
-                handleAddGoal();
-              }}
+            <button
+              type="button"
+              onClick={() => setModalOpen(true)}
+              className={btnPrimary + " inline-flex gap-2"}
             >
-              <input
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="New quarterly goal"
-                className={`${inputBase} w-full min-w-0 sm:w-80`}
-              />
-              <button
-                type="button"
-                className={`${btnPrimary} shrink-0`}
-                disabled={!title.trim()}
-                onClick={handleAddGoal}
-              >
-                <Plus className="size-4" />
-                Add
-              </button>
-            </form>
+              <Plus className="size-4" />
+              Add goal
+            </button>
           </div>
+
+          {modalOpen && (
+            <div
+              className="fixed inset-0 z-50 flex items-center justify-center p-4"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="add-goal-title"
+            >
+              <div className="absolute inset-0 bg-black/50" onClick={() => setModalOpen(false)} aria-hidden />
+              <div
+                className="relative w-full max-w-md rounded-[var(--radius-lg)] border border-[var(--surface-border)] bg-[var(--surface)] p-6 shadow-[var(--shadow-card)]"
+                onKeyDown={(e) => e.key === "Escape" && setModalOpen(false)}
+              >
+                <h2 id="add-goal-title" className="text-[16px] font-semibold text-[var(--text-primary)]">
+                  New quarterly goal
+                </h2>
+                <p className="mt-1 text-[13px] text-[var(--text-muted)]">
+                  A Rock for this quarter. Default due date is ~90 days out.
+                </p>
+                <form
+                  className="mt-5 space-y-4"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    const t = title.trim();
+                    if (!t) {
+                      toast("Enter a goal title", "info");
+                      titleRef.current?.focus();
+                      return;
+                    }
+                    handleAddGoal();
+                  }}
+                >
+                  <div>
+                    <label className="mb-1 block text-[12px] font-medium text-[var(--text-secondary)]">Title</label>
+                    <input
+                      ref={titleRef}
+                      type="text"
+                      value={title}
+                      onChange={(e) => setTitle(e.target.value)}
+                      placeholder="e.g. Reduce lead-to-contact time to under 30 min"
+                      className={inputBase + " w-full"}
+                      aria-label="Goal title"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-[12px] font-medium text-[var(--text-secondary)]">Due date (optional)</label>
+                    <input
+                      type="date"
+                      value={dueDate}
+                      onChange={(e) => setDueDate(e.target.value)}
+                      className={inputBase + " w-full"}
+                      aria-label="Due date"
+                    />
+                  </div>
+                  <div className="flex justify-end gap-2">
+                    <button type="button" onClick={() => setModalOpen(false)} className={btnSecondary}>
+                      Cancel
+                    </button>
+                    <button type="submit" className={btnPrimary}>
+                      Add goal
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
 
           <div className="grid gap-4 p-5 sm:grid-cols-2">
             {goals.map((g) => {

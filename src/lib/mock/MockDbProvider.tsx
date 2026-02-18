@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
-import type { GoalStatus, MeetingSectionKind, PermissionCode } from "@/lib/domain";
+import type { AvatarColor, AvatarStyle, GoalStatus, MeetingSectionKind, PermissionCode } from "@/lib/domain";
 import type { MeetingSection, MeetingTemplate } from "@/lib/domain";
 import type { MockDb, MeetingRunStatus, Vision } from "@/lib/mock/mockData";
 import { createInitialMockDb, startOfWeek } from "@/lib/mock/mockData";
@@ -25,14 +25,17 @@ type MockDbApi = {
   createTodo(title: string): void;
   toggleTodo(todoId: string): void;
 
-  createIssue(title: string): void;
+  createIssue(title: string, notes?: string): void;
   resolveIssue(issueId: string): void;
   reopenIssue(issueId: string): void;
 
-  createGoal(title: string): void;
+  createGoal(title: string, dueDate?: string): void;
   setGoalStatus(goalId: string, status: GoalStatus): void;
 
   upsertKpiEntry(kpiId: string, weekOf: string, value: number): void;
+  createKpi(payload: { title: string; goal: number; unit: string; ownerId: string }): void;
+  updateKpi(kpiId: string, payload: { title?: string; goal?: number; unit?: string; ownerId?: string }): void;
+  deleteKpi(kpiId: string): void;
 
   setMeetingNotes(notes: string): void;
   setMeetingFeedback(weekOf: string, rating: number, comment?: string): void;
@@ -42,8 +45,8 @@ type MockDbApi = {
   getMeetingTemplate(templateId?: string): MockDb["meetingTemplates"][number] | undefined;
   meetingSectionOrder(): MeetingSectionKind[];
 
-  createUser(payload: { name: string; roleId: string; initials?: string }): void;
-  updateUser(userId: string, payload: { name?: string; roleId?: string; initials?: string }): void;
+  createUser(payload: { name: string; roleId: string; email?: string; initials?: string }): void;
+  updateUser(userId: string, payload: { name?: string; roleId?: string; email?: string; initials?: string; avatarUrl?: string; avatarStyle?: AvatarStyle; avatarColor?: AvatarColor }): void;
   deleteUser(userId: string): void;
 
   createMeetingTemplate(payload: { title: string; sections: MeetingSection[] }): void;
@@ -308,7 +311,7 @@ export function MockDbProvider({ children }: { children: React.ReactNode }) {
         }));
       },
 
-      createIssue(title) {
+      createIssue(title, notes) {
         const now = new Date().toISOString();
         const nextPriority =
           Math.max(1, ...db.issues.map((i) => i.priority), 0) + 1;
@@ -321,6 +324,7 @@ export function MockDbProvider({ children }: { children: React.ReactNode }) {
               status: "open",
               priority: Math.min(5, nextPriority),
               createdAt: now,
+              ...(notes != null && notes.trim() && { notes: notes.trim() }),
             });
             return;
           }
@@ -334,6 +338,7 @@ export function MockDbProvider({ children }: { children: React.ReactNode }) {
               status: "open",
               priority: Math.min(5, nextPriority),
               createdAt: now,
+              ...(notes != null && notes.trim() && { notes: notes.trim() }),
             },
             ...prev.issues,
           ],
@@ -372,9 +377,12 @@ export function MockDbProvider({ children }: { children: React.ReactNode }) {
         }));
       },
 
-      createGoal(title) {
+      createGoal(title, dueDateParam) {
         const now = new Date();
-        const due = new Date(now.getTime() + 75 * 86400_000);
+        const defaultDue = new Date(now.getTime() + 75 * 86400_000);
+        const dueDate = (dueDateParam?.trim() && /^\d{4}-\d{2}-\d{2}$/.test(dueDateParam))
+          ? dueDateParam
+          : isoDateOnly(defaultDue);
         const ownerId = me?.id ?? db.users[0]?.id ?? "u_me";
         if (firestore) {
           const id = `g_${crypto.randomUUID().slice(0, 10)}`;
@@ -384,7 +392,7 @@ export function MockDbProvider({ children }: { children: React.ReactNode }) {
               title,
               ownerId,
               status: "onTrack",
-              dueDate: isoDateOnly(due),
+              dueDate,
               createdAt: now.toISOString(),
             });
             return;
@@ -398,7 +406,7 @@ export function MockDbProvider({ children }: { children: React.ReactNode }) {
               title,
               ownerId,
               status: "onTrack",
-              dueDate: isoDateOnly(due),
+              dueDate,
               createdAt: now.toISOString(),
             },
             ...prev.goals,
@@ -448,6 +456,71 @@ export function MockDbProvider({ children }: { children: React.ReactNode }) {
             ],
           };
         });
+      },
+
+      createKpi(payload) {
+        const now = new Date().toISOString();
+        const id = `kpi_${crypto.randomUUID().slice(0, 8)}`;
+        const kpi = {
+          id,
+          title: payload.title.trim(),
+          ownerId: payload.ownerId,
+          goal: Number(payload.goal) || 0,
+          unit: payload.unit.trim() || "count",
+          createdAt: now,
+        };
+        if (firestore) {
+          const ref = docRef("kpis", id);
+          if (ref) {
+            void setDoc(ref, { title: kpi.title, ownerId: kpi.ownerId, goal: kpi.goal, unit: kpi.unit, createdAt: now });
+            return;
+          }
+        }
+        setDb((prev) => ({ ...prev, kpis: [...prev.kpis, kpi] }));
+      },
+
+      updateKpi(kpiId, payload) {
+        const existing = db.kpis.find((k) => k.id === kpiId);
+        if (!existing) return;
+        const next = {
+          ...existing,
+          ...(payload.title !== undefined && { title: payload.title.trim() }),
+          ...(payload.goal !== undefined && { goal: Number(payload.goal) || existing.goal }),
+          ...(payload.unit !== undefined && { unit: payload.unit.trim() || existing.unit }),
+          ...(payload.ownerId !== undefined && { ownerId: payload.ownerId }),
+        };
+        setDb((prev) => ({
+          ...prev,
+          kpis: prev.kpis.map((k) => (k.id === kpiId ? next : k)),
+        }));
+        if (firestore) {
+          const ref = docRef("kpis", kpiId);
+          if (ref) {
+            const updates: Record<string, unknown> = {};
+            if (payload.title !== undefined) updates.title = next.title;
+            if (payload.goal !== undefined) updates.goal = next.goal;
+            if (payload.unit !== undefined) updates.unit = next.unit;
+            if (payload.ownerId !== undefined) updates.ownerId = next.ownerId;
+            if (Object.keys(updates).length) void updateDoc(ref, updates);
+          }
+        }
+      },
+
+      deleteKpi(kpiId) {
+        setDb((prev) => ({
+          ...prev,
+          kpis: prev.kpis.filter((k) => k.id !== kpiId),
+          kpiEntries: prev.kpiEntries.filter((e) => e.kpiId !== kpiId),
+        }));
+        if (firestore) {
+          const ref = docRef("kpis", kpiId);
+          if (ref) void deleteDoc(ref);
+          const entriesToDelete = db.kpiEntries.filter((e) => e.kpiId === kpiId);
+          for (const e of entriesToDelete) {
+            const entryRef = docRef("kpiEntries", `${e.kpiId}__${e.weekOf}`);
+            if (entryRef) void deleteDoc(entryRef);
+          }
+        }
       },
 
       setMeetingNotes(notes) {
@@ -520,6 +593,7 @@ export function MockDbProvider({ children }: { children: React.ReactNode }) {
 
       createUser(payload) {
         const name = payload.name.trim();
+        const email = payload.email?.trim() || undefined;
         const initials =
           payload.initials?.trim().slice(0, 4) ||
           name
@@ -530,11 +604,11 @@ export function MockDbProvider({ children }: { children: React.ReactNode }) {
             .slice(0, 4) ||
           "??";
         const id = `u_${crypto.randomUUID().slice(0, 8)}`;
-        const user = { id, name, initials, roleId: payload.roleId };
+        const user = { id, name, initials, roleId: payload.roleId, ...(email && { email }) };
         if (firestore) {
           const ref = docRef("users", id);
           if (ref) {
-            void setDoc(ref, { name, initials, roleId: payload.roleId });
+            void setDoc(ref, { name, initials, roleId: payload.roleId, ...(email && { email }) });
             return;
           }
         }
@@ -548,7 +622,11 @@ export function MockDbProvider({ children }: { children: React.ReactNode }) {
           ...existing,
           ...(payload.name !== undefined && { name: payload.name.trim() }),
           ...(payload.roleId !== undefined && { roleId: payload.roleId }),
+          ...(payload.email !== undefined && { email: payload.email?.trim() || undefined }),
           ...(payload.initials !== undefined && { initials: payload.initials.trim().slice(0, 4) }),
+          ...(payload.avatarUrl !== undefined && { avatarUrl: payload.avatarUrl || undefined }),
+          ...(payload.avatarStyle !== undefined && { avatarStyle: payload.avatarStyle }),
+          ...(payload.avatarColor !== undefined && { avatarColor: payload.avatarColor }),
         };
         setDb((prev) => ({
           ...prev,
@@ -557,10 +635,14 @@ export function MockDbProvider({ children }: { children: React.ReactNode }) {
         if (firestore) {
           const ref = docRef("users", userId);
           if (ref) {
-            const updates: Record<string, string> = {};
+            const updates: Record<string, string | undefined> = {};
             if (payload.name !== undefined) updates.name = next.name;
             if (payload.roleId !== undefined) updates.roleId = next.roleId;
+            if (payload.email !== undefined) updates.email = next.email;
             if (payload.initials !== undefined) updates.initials = next.initials;
+            if (payload.avatarUrl !== undefined) updates.avatarUrl = next.avatarUrl;
+            if (payload.avatarStyle !== undefined) updates.avatarStyle = next.avatarStyle;
+            if (payload.avatarColor !== undefined) updates.avatarColor = next.avatarColor;
             if (Object.keys(updates).length) void updateDoc(ref, updates);
             return;
           }

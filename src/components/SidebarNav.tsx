@@ -15,6 +15,7 @@ import {
   Users,
   UserPlus,
   Compass,
+  UserCircle,
 } from "lucide-react";
 
 type NavItem = {
@@ -34,6 +35,7 @@ const navGroups: NavGroup[] = [
     items: [
       { href: "/", label: "Home", icon: Home },
       { href: "/vision", label: "Vision", icon: Compass },
+      { href: "/profile", label: "Profile", icon: UserCircle },
     ],
   },
   {

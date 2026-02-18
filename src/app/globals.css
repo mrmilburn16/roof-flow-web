@@ -59,6 +59,16 @@
   --quickstat-progress-bg: #6d28d9;
   --quickstat-progress-text: #f5f3ff;
   --muted-bg: #f4f4f5;
+  --avatar-grey-bg: #e4e4e7;
+  --avatar-grey-text: #52525b;
+  --avatar-blue-bg: #3b82f6;
+  --avatar-blue-text: #eff6ff;
+  --avatar-green-bg: #059669;
+  --avatar-green-text: #ecfdf5;
+  --avatar-amber-bg: #d97706;
+  --avatar-amber-text: #fffbeb;
+  --avatar-violet-bg: #7c3aed;
+  --avatar-violet-text: #f5f3ff;
 }
 
 /* Slate: cooler, more formal. Soft blue accent so it’s not flat. */
@@ -116,6 +126,16 @@
   --quickstat-progress-bg: #6d28d9;
   --quickstat-progress-text: #f5f3ff;
   --muted-bg: #e8eef6;
+  --avatar-grey-bg: #94a3b8;
+  --avatar-grey-text: #f1f5f9;
+  --avatar-blue-bg: #2563eb;
+  --avatar-blue-text: #dbeafe;
+  --avatar-green-bg: #047857;
+  --avatar-green-text: #d1fae5;
+  --avatar-amber-bg: #b45309;
+  --avatar-amber-text: #fffbeb;
+  --avatar-violet-bg: #6d28d9;
+  --avatar-violet-text: #ede9fe;
 }
 
 /* Onyx: deep dark. Slightly softened for readability; professional for evening or low-light use. */
@@ -173,6 +193,16 @@
   --quickstat-progress-bg: #7c3aed;
   --quickstat-progress-text: #f5f3ff;
   --muted-bg: #2d2d31;
+  --avatar-grey-bg: #3f3f46;
+  --avatar-grey-text: #e4e4e7;
+  --avatar-blue-bg: #2563eb;
+  --avatar-blue-text: #dbeafe;
+  --avatar-green-bg: #059669;
+  --avatar-green-text: #d1fae5;
+  --avatar-amber-bg: #d97706;
+  --avatar-amber-text: #fef3c7;
+  --avatar-violet-bg: #7c3aed;
+  --avatar-violet-text: #ede9fe;
 }
 
 @theme inline {
