@@ -28,7 +28,8 @@ type MockDbApi = {
 
   createTodo(title: string): void;
   toggleTodo(todoId: string): void;
-  createFeedback(message: string, page: string): void;
+  createFeedback(message: string, page: string, userName?: string): void;
+  deleteFeedback(feedbackId: string): void;
 
   createIssue(title: string, notes?: string): void;
   resolveIssue(issueId: string): void;
@@ -65,6 +66,21 @@ function isoDateOnly(d: Date) {
   return d.toISOString().slice(0, 10);
 }
 
+const FEEDBACK_STORAGE_KEY = "roofflow_feedback";
+
+function loadPersistedFeedback(): import("@/lib/domain").FeedbackItem[] {
+  if (typeof window === "undefined") return [];
+  if (process.env.NEXT_PUBLIC_USE_FIRESTORE === "true") return [];
+  try {
+    const s = localStorage.getItem(FEEDBACK_STORAGE_KEY);
+    if (!s) return [];
+    const p = JSON.parse(s);
+    return Array.isArray(p) ? p : [];
+  } catch {
+    return [];
+  }
+}
+
 export function MockDbProvider({ children }: { children: React.ReactNode }) {
   const [db, setDb] = useState<MockDb>(() => createInitialMockDb());
   const authState = useAuth();
@@ -72,6 +88,15 @@ export function MockDbProvider({ children }: { children: React.ReactNode }) {
   const useFirestore =
     process.env.NEXT_PUBLIC_USE_FIRESTORE === "true" && isFirebaseConfigured();
   const firestore = useFirestore ? getFirebaseDb() : null;
+
+  // Hydrate feedback from localStorage on client (mock mode only)
+  useEffect(() => {
+    if (firestore) return;
+    const persisted = loadPersistedFeedback();
+    if (persisted.length > 0) {
+      setDb((prev) => ({ ...prev, feedback: persisted }));
+    }
+  }, [firestore]);
 
   const companyId = process.env.NEXT_PUBLIC_COMPANY_ID || "c_roofco";
   const teamId = process.env.NEXT_PUBLIC_TEAM_ID || "t_leadership";
@@ -386,7 +411,7 @@ export function MockDbProvider({ children }: { children: React.ReactNode }) {
         }));
       },
 
-      createFeedback(message, page) {
+      createFeedback(message, page, userName) {
         const trimmed = message?.trim();
         if (!trimmed) return;
         const now = new Date().toISOString();
@@ -394,7 +419,7 @@ export function MockDbProvider({ children }: { children: React.ReactNode }) {
         const item = {
           id,
           userId: me.id,
-          userName: me.name,
+          userName: (userName?.trim() || me.name) as string,
           page,
           message: trimmed,
           createdAt: now,
@@ -403,10 +428,35 @@ export function MockDbProvider({ children }: { children: React.ReactNode }) {
           const ref = doc(firestore, "companies", companyId, "teams", teamId, "feedback", id);
           void setDoc(ref, item);
         }
-        setDb((prev) => ({
-          ...prev,
-          feedback: [item, ...prev.feedback],
-        }));
+        setDb((prev) => {
+          const next = [item, ...prev.feedback];
+          if (!firestore) {
+            try {
+              localStorage.setItem(FEEDBACK_STORAGE_KEY, JSON.stringify(next));
+            } catch {
+              /* ignore */
+            }
+          }
+          return { ...prev, feedback: next };
+        });
+      },
+
+      deleteFeedback(feedbackId) {
+        if (firestore) {
+          const ref = doc(firestore, "companies", companyId, "teams", teamId, "feedback", feedbackId);
+          void deleteDoc(ref);
+        }
+        setDb((prev) => {
+          const next = prev.feedback.filter((f) => f.id !== feedbackId);
+          if (!firestore) {
+            try {
+              localStorage.setItem(FEEDBACK_STORAGE_KEY, JSON.stringify(next));
+            } catch {
+              /* ignore */
+            }
+          }
+          return { ...prev, feedback: next };
+        });
       },
 
       createIssue(title, notes) {

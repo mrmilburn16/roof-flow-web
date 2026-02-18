@@ -7,7 +7,7 @@ import { TrendingUp, Calendar, Play, ChevronDown, Check, Plus, Pencil, Trash2, X
 import { useMockDb } from "@/lib/mock/MockDbProvider";
 import { startOfWeek } from "@/lib/mock/mockData";
 import { useToast } from "@/lib/toast/ToastProvider";
-import { PageTitle, card, inputBase, btnPrimary, btnSecondary, StatusBadge } from "@/components/ui";
+import { PageTitle, card, inputBase, btnPrimary, btnSecondary, StatusBadge, Select } from "@/components/ui";
 import { EmptyState } from "@/components/EmptyState";
 
 function isoDateOnly(d: Date) {
@@ -538,28 +538,28 @@ export default function ScorecardPage() {
                 </div>
                 <div>
                   <label className="mb-1 block text-[12px] font-medium text-[var(--text-secondary)]">Unit</label>
-                  <select
+                  <Select
+                    aria-label="Unit"
                     value={kpiUnit}
-                    onChange={(e) => setKpiUnit(e.target.value)}
-                    className={inputBase + " w-full"}
-                  >
-                    {UNIT_OPTIONS.map((u) => (
-                      <option key={u} value={u}>{u === "$" ? "Dollars ($)" : u === "%" ? "Percent (%)" : "Count"}</option>
-                    ))}
-                  </select>
+                    onChange={setKpiUnit}
+                    options={[
+                      { value: "count", label: "Count" },
+                      { value: "$", label: "Dollars ($)" },
+                      { value: "%", label: "Percent (%)" },
+                    ]}
+                    className="w-full"
+                  />
                 </div>
               </div>
               <div>
                 <label className="mb-1 block text-[12px] font-medium text-[var(--text-secondary)]">Owner</label>
-                <select
+                <Select
+                  aria-label="Owner"
                   value={kpiOwnerId}
-                  onChange={(e) => setKpiOwnerId(e.target.value)}
-                  className={inputBase + " w-full"}
-                >
-                  {db.users.map((u) => (
-                    <option key={u.id} value={u.id}>{u.name}</option>
-                  ))}
-                </select>
+                  onChange={setKpiOwnerId}
+                  options={db.users.map((u) => ({ value: u.id, label: u.name }))}
+                  className="w-full"
+                />
               </div>
               <div className="flex flex-wrap items-center justify-center gap-2">
                 {editingKpiId && (

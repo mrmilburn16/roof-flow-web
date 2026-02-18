@@ -9,7 +9,7 @@ import { getFirebaseDb, isFirebaseConfigured } from "@/lib/firebase/client";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { useTheme } from "@/lib/theme/ThemeProvider";
 import { THEMES } from "@/lib/theme/ThemeProvider";
-import { PageTitle, card, btnPrimary, StatusBadge, inputBase } from "@/components/ui";
+import { PageTitle, card, btnPrimary, StatusBadge, inputBase, Select } from "@/components/ui";
 
 export default function SettingsPage() {
   const firestore = getFirebaseDb();
@@ -151,18 +151,13 @@ export default function SettingsPage() {
                   App appearance. You can also change it in the sidebar.
                 </p>
               </div>
-              <select
-                value={theme}
-                onChange={(e) => setTheme(e.target.value as "dawn" | "slate" | "onyx")}
-                className={inputBase + " min-w-[140px] capitalize"}
+              <Select
                 aria-label="Theme"
-              >
-                {THEMES.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.label} — {t.description}
-                  </option>
-                ))}
-              </select>
+                value={theme}
+                onChange={(v) => setTheme(v as "dawn" | "slate" | "onyx")}
+                options={THEMES.map((t) => ({ value: t.id, label: `${t.label} — ${t.description}` }))}
+                className="min-w-[200px]"
+              />
             </div>
             {authEnabled && user && (
               <div className="rounded-[var(--radius)] border border-[var(--border)] bg-[var(--muted-bg)] px-4 py-3">

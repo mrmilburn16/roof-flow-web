@@ -3,7 +3,7 @@
 /* Dawn: warm neutral light (current default). Clean, approachable, professional. */
 :root,
 [data-theme="dawn"] {
-  --background: #fafafa;
+  --background: #f5f5f5;
   --foreground: #09090b;
   --surface: #ffffff;
   --surface-border: #e4e4e7;
@@ -95,13 +95,13 @@
 
 /* Slate: cooler, more formal. Soft blue accent so it’s not flat. */
 [data-theme="slate"] {
-  --background: #eef2f9;
+  --background: #e5eaf3;
   --foreground: #0f172a;
   --surface: #ffffff;
   --surface-border: #dce4f0;
-  /* App chrome layering (Slate only): subtle gradient + slightly darker sidebar */
-  --app-bg-top: #f7f9fc;
-  --app-bg-bottom: #eef2f7;
+  /* App chrome: content area slightly darker than cards for contrast */
+  --app-bg-top: #eef1f8;
+  --app-bg-bottom: #e5eaf2;
   --sidebar-bg: #ffffff;
   --sidebar-border: #e6ebf2;
   --panel-divider: #e6ebf2;
@@ -584,5 +584,27 @@ input[type="checkbox"]:focus-visible {
     transition: none;
     transform: none;
     opacity: 1;
+  }
+}
+
+/* Feedback 2.0 modal entrance */
+@keyframes feedback-modal-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.feedback-modal-in {
+  animation: feedback-modal-in 240ms cubic-bezier(0.21, 1.02, 0.73, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .feedback-modal-in {
+    animation: none;
   }
 }

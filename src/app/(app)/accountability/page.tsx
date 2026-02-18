@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import Link from "next/link";
 import { Users, Info } from "lucide-react";
 import { useMockDb } from "@/lib/mock/MockDbProvider";
-import { PageTitle, card } from "@/components/ui";
+import { PageTitle, card, Select } from "@/components/ui";
 
 /** Set to false to show the full accountability chart. */
 const ACCOUNTABILITY_CHART_COMING_SOON = true;
@@ -119,21 +119,17 @@ function OrgChartCard({
       <div className="font-semibold text-[var(--text-primary)] text-[14px]">{role.name}</div>
       {canEdit && !isOwner ? (
         <div className="mt-1.5">
-          <label htmlFor={`reports-to-${role.id}`} className="sr-only">Reports to</label>
-          <select
+          <Select
             id={`reports-to-${role.id}`}
+            aria-label="Reports to"
             value={role.parentRoleId ?? ""}
-            onChange={(e) => {
-              const v = e.target.value;
-              onReportsToChange(role.id, v === "" ? null : v);
-            }}
-            className="w-full rounded-[var(--radius)] border border-[var(--input-border)] bg-[var(--input-bg)] py-1 px-2 text-[11px] text-[var(--text-secondary)] focus:ring-1 focus:ring-[var(--ring)]"
-          >
-            <option value="">Top level</option>
-            {reportsToOptions.filter((o) => o.id !== role.id).map((o) => (
-              <option key={o.id} value={o.id}>{o.name}</option>
-            ))}
-          </select>
+            onChange={(v) => onReportsToChange(role.id, v === "" ? null : v)}
+            options={[
+              { value: "", label: "Top level" },
+              ...reportsToOptions.filter((o) => o.id !== role.id).map((o) => ({ value: o.id, label: o.name })),
+            ]}
+            className="w-full text-[11px]"
+          />
         </div>
       ) : (
         parentName && (

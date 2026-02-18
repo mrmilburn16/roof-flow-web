@@ -4,7 +4,7 @@ import { useState } from "react";
 import { UserPlus, Pencil, Trash2, Lock } from "lucide-react";
 import { useMockDb } from "@/lib/mock/MockDbProvider";
 import { useToast } from "@/lib/toast/ToastProvider";
-import { PageTitle, card, btnPrimary, btnSecondary, inputBase } from "@/components/ui";
+import { PageTitle, card, btnPrimary, btnSecondary, inputBase, Select } from "@/components/ui";
 import { Avatar } from "@/components/Avatar";
 
 export default function PeoplePage() {
@@ -127,18 +127,17 @@ export default function PeoplePage() {
               />
             </div>
             <div className="min-w-[160px]">
-              <label className="mb-1 block text-[12px] font-medium text-[var(--text-secondary)]">Role</label>
-              <select
+              <label htmlFor="add-role" className="mb-1 block text-[12px] font-medium text-[var(--text-secondary)]">
+                Role
+              </label>
+              <Select
+                id="add-role"
+                aria-label="Role"
                 value={addRoleId}
-                onChange={(e) => setAddRoleId(e.target.value)}
-                className={inputBase + " w-full"}
-              >
-                {roles.map((r) => (
-                  <option key={r.id} value={r.id}>
-                    {r.name}
-                  </option>
-                ))}
-              </select>
+                onChange={setAddRoleId}
+                options={roles.map((r) => ({ value: r.id, label: r.name }))}
+                className="w-full"
+              />
             </div>
             <div className="flex shrink-0 gap-2 self-end">
               <button type="button" onClick={handleAdd} className={btnPrimary}>
@@ -184,17 +183,13 @@ export default function PeoplePage() {
                         autoComplete="email"
                       />
                     </div>
-                    <select
+                    <Select
+                      aria-label="Role"
                       value={editRoleId}
-                      onChange={(e) => setEditRoleId(e.target.value)}
-                      className={inputBase + " min-w-[140px]"}
-                    >
-                      {roles.map((r) => (
-                        <option key={r.id} value={r.id}>
-                          {r.name}
-                        </option>
-                      ))}
-                    </select>
+                      onChange={setEditRoleId}
+                      options={roles.map((r) => ({ value: r.id, label: r.name }))}
+                      className="min-w-[140px]"
+                    />
                     <div className="flex gap-2">
                       <button type="button" onClick={saveEdit} className={btnPrimary}>
                         Save

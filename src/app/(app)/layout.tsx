@@ -1,10 +1,13 @@
 import { SidebarNav } from "@/components/SidebarNav";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { FeedbackButton } from "@/components/FeedbackButton";
+import { FeedbackProvider } from "@/components/FeedbackProvider";
+import { FeedbackReturnBanner } from "@/components/FeedbackReturnBanner";
 import { BetaBadge } from "@/components/BetaBadge";
 import { AppPageTitle } from "@/components/AppPageTitle";
 import { PageTransition } from "@/components/PageTransition";
 import { RequireAuth } from "@/components/RequireAuth";
+import { Suspense } from "react";
 import { Providers } from "./providers";
 
 export default function AppLayout({
@@ -15,6 +18,7 @@ export default function AppLayout({
   return (
     <Providers>
       <RequireAuth>
+        <FeedbackProvider>
         <div className="min-h-dvh">
           <div className="flex w-full gap-6 px-6 py-6">
             <aside
@@ -48,12 +52,18 @@ export default function AppLayout({
               <div className="px-8 pt-6 pb-2">
                 <AppPageTitle />
               </div>
+              <div className="px-8 pt-2">
+                <Suspense fallback={null}>
+                  <FeedbackReturnBanner />
+                </Suspense>
+              </div>
               <div className="px-8 py-8">
                 <PageTransition>{children}</PageTransition>
               </div>
             </main>
           </div>
         </div>
+        </FeedbackProvider>
       </RequireAuth>
     </Providers>
   );

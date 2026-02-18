@@ -76,14 +76,11 @@ export function SidebarNav() {
     <nav className="flex-1 overflow-y-auto px-3 pb-3 pt-0">
       <div className="flex flex-col">
         {navGroups.map((group, index) => (
-          <div
-            key={group.label}
-            className={
-              index === 0
-                ? "flex min-h-[88px] flex-col justify-center py-5"
-                : "flex min-h-[88px] flex-col justify-center py-5"
-            }
-          >
+          <div key={group.label} className="flex flex-col">
+            {index > 0 && (
+              <hr className="my-3 border-0 border-t border-[var(--border)]" aria-hidden />
+            )}
+            <div className="flex min-h-[88px] flex-col justify-center py-5">
             <div>
               <div className="mb-1 px-3 text-[11px] font-medium uppercase tracking-wider text-[var(--text-muted)]">
                 {group.label}
@@ -118,6 +115,7 @@ export function SidebarNav() {
                   );
                 })}
               </div>
+            </div>
             </div>
           </div>
         ))}

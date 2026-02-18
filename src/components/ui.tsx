@@ -86,6 +86,9 @@ export function StatusBadge({
   );
 }
 
+export { Select } from "./Select";
+export type { SelectOption } from "./Select";
+
 export {
   card,
   cardHeader,

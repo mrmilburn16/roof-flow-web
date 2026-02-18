@@ -1,12 +1,15 @@
 "use client";
 
 import { useMemo } from "react";
-import { MessageCircle } from "lucide-react";
+import Link from "next/link";
+import { MessageCircle, Trash2 } from "lucide-react";
 import { useMockDb } from "@/lib/mock/MockDbProvider";
 import { PageTitle, card } from "@/components/ui";
 
 function formatFeedbackDate(iso: string): string {
-  const d = new Date(iso + "T12:00:00");
+  if (!iso?.trim()) return "—";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "—";
   return d.toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
@@ -17,7 +20,7 @@ function formatFeedbackDate(iso: string): string {
 }
 
 export default function FeedbackInboxPage() {
-  const { db, hasPermission } = useMockDb();
+  const { db, hasPermission, deleteFeedback } = useMockDb();
   const canView = hasPermission("view_feedback");
   const feedbackList = useMemo(
     () => [...db.feedback].sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
@@ -51,15 +54,40 @@ export default function FeedbackInboxPage() {
           ) : (
             <ul className="divide-y divide-[var(--border)] space-y-0">
               {feedbackList.map((f) => (
-                <li key={f.id} className="py-4 first:pt-0">
-                  <div className="flex flex-wrap items-baseline gap-2 text-[12px] text-[var(--text-muted)]">
-                    <span className="font-medium text-[var(--text-primary)]">{f.userName}</span>
-                    <span>·</span>
-                    <span>{f.page}</span>
-                    <span>·</span>
-                    <span>{formatFeedbackDate(f.createdAt)}</span>
+                <li key={f.id} className="group flex items-start justify-between gap-4 py-4 first:pt-0">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1 text-[12px] text-[var(--text-muted)]">
+                      <span className="font-medium text-[var(--text-primary)]">{f.userName}</span>
+                      <span aria-hidden>·</span>
+                    <span>
+                      <span className="text-[var(--text-muted)]">Page:</span>{" "}
+                      <Link
+                        href={f.page + (f.page.includes("?") ? "&" : "?") + "from=feedback-inbox"}
+                        className="rounded bg-[var(--muted-bg)] px-1 py-0.5 font-mono text-[11px] text-[var(--text-secondary)] underline decoration-[var(--text-muted)]/50 underline-offset-1 transition hover:bg-[var(--nav-hover-bg)] hover:text-[var(--text-primary)] hover:decoration-[var(--text-primary)]"
+                      >
+                        {f.page}
+                      </Link>
+                    </span>
+                      <span aria-hidden>·</span>
+                      <span>{formatFeedbackDate(f.createdAt)}</span>
+                    </div>
+                    <p className="mt-1.5 text-[14px] text-[var(--text-secondary)]">
+                      <span className="font-medium text-[var(--text-primary)]">Feedback:</span> {f.message}
+                    </p>
                   </div>
-                  <p className="mt-1 text-[14px] text-[var(--text-secondary)]">{f.message}</p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (typeof window !== "undefined" && window.confirm("Delete this feedback?")) {
+                        deleteFeedback(f.id);
+                      }
+                    }}
+                    className="shrink-0 rounded-[var(--radius)] p-2 text-[var(--text-muted)] transition hover:bg-[var(--btn-danger-bg)] hover:text-[var(--btn-danger-text)] focus:outline-none focus:ring-2 focus:ring-[var(--ring)]"
+                    title="Delete feedback"
+                    aria-label={`Delete feedback from ${f.userName}`}
+                  >
+                    <Trash2 className="size-4" />
+                  </button>
                 </li>
               ))}
             </ul>

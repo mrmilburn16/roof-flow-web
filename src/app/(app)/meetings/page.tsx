@@ -6,7 +6,7 @@ import { Calendar, Play, ListTodo, Clock, AlertCircle, XCircle, RotateCcw, MoreH
 import type { MeetingSectionKind, MeetingTemplate } from "@/lib/domain";
 import { useMockDb } from "@/lib/mock/MockDbProvider";
 import { useToast } from "@/lib/toast/ToastProvider";
-import { PageTitle, card, btnPrimary, btnSecondary, StatusBadge, inputBase } from "@/components/ui";
+import { PageTitle, card, btnPrimary, btnSecondary, StatusBadge, inputBase, Select } from "@/components/ui";
 
 function formatWeek(weekOf: string) {
   const d = new Date(weekOf + "T12:00:00");
@@ -310,16 +310,14 @@ export default function MeetingsPage() {
                     {templates.length > 1 ? (
                       <div className="flex flex-wrap items-center gap-2">
                         <label htmlFor="meeting-template-select" className="sr-only">Meeting template</label>
-                        <select
+                        <Select
                           id="meeting-template-select"
+                          aria-label="Meeting template"
                           value={selectedTemplateId}
-                          onChange={(e) => setSelectedTemplateId(e.target.value)}
-                          className="rounded-[var(--radius)] border border-[var(--input-border)] bg-[var(--input-bg)] px-3 py-2 text-[14px] font-semibold text-[var(--text-primary)] focus:ring-2 focus:ring-[var(--ring)]"
-                        >
-                          {templates.map((t) => (
-                            <option key={t.id} value={t.id}>{t.title}</option>
-                          ))}
-                        </select>
+                          onChange={setSelectedTemplateId}
+                          options={templates.map((t) => ({ value: t.id, label: t.title }))}
+                          className="min-w-[160px]"
+                        />
                       </div>
                     ) : (
                       <div className="text-[15px] font-semibold text-[var(--text-primary)]">

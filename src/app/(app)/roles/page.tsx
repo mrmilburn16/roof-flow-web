@@ -16,7 +16,7 @@ const PERMISSION_GROUPS: { label: string; codes: PermissionCode[] }[] = [
 ];
 import { useMockDb } from "@/lib/mock/MockDbProvider";
 import { useToast } from "@/lib/toast/ToastProvider";
-import { PageTitle, card, btnPrimary, btnSecondary, inputBase } from "@/components/ui";
+import { PageTitle, card, btnPrimary, btnSecondary, inputBase, Select } from "@/components/ui";
 
 export default function RolesPage() {
   const { db, hasPermission, setRolePermissions, createRole, updateRole, deleteRole } = useMockDb();
@@ -207,18 +207,14 @@ export default function RolesPage() {
                 <label htmlFor="new-role-parent" className="mb-1 block text-[12px] font-medium text-[var(--text-muted)]">
                   Reports to
                 </label>
-                <select
+                <Select
                   id="new-role-parent"
+                  aria-label="Reports to"
                   value={newRoleParentId}
-                  onChange={(e) => setNewRoleParentId(e.target.value)}
-                  className="w-full rounded-[var(--radius)] border border-[var(--input-border)] bg-[var(--input-bg)] px-3.5 py-2.5 text-[14px] text-[var(--input-text)] focus:ring-2 focus:ring-[var(--ring)]"
-                >
-                  {parentRoleOptions.map((o) => (
-                    <option key={o.id || "top"} value={o.id}>
-                      {o.name}
-                    </option>
-                  ))}
-                </select>
+                  onChange={setNewRoleParentId}
+                  options={parentRoleOptions.map((o) => ({ value: o.id, label: o.name }))}
+                  className="w-full"
+                />
               </div>
               <div className="flex gap-2">
                 <button type="button" onClick={handleAddRole} className={btnPrimary}>

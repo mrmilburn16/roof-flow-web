@@ -7,7 +7,7 @@ import { ChevronUp, ChevronDown, Plus, Trash2 } from "lucide-react";
 import type { MeetingSection, MeetingSectionKind } from "@/lib/domain";
 import { useMockDb } from "@/lib/mock/MockDbProvider";
 import { useToast } from "@/lib/toast/ToastProvider";
-import { PageTitle, card, btnPrimary, btnSecondary, inputBase } from "@/components/ui";
+import { PageTitle, card, btnPrimary, btnSecondary, inputBase, Select } from "@/components/ui";
 
 const SECTION_KINDS: MeetingSectionKind[] = [
   "segue",
@@ -200,20 +200,13 @@ export default function EditAgendaPage({
                   <ChevronDown className="size-4" />
                 </button>
               </div>
-              <select
+              <Select
+                aria-label="Section type"
                 value={s.kind}
-                onChange={(e) => {
-                  const kind = e.target.value as MeetingSectionKind;
-                  updateSection(i, { kind, title: KIND_LABELS[kind] });
-                }}
-                className={inputBase + " w-[160px]"}
-              >
-                {SECTION_KINDS.map((k) => (
-                  <option key={k} value={k}>
-                    {KIND_LABELS[k]}
-                  </option>
-                ))}
-              </select>
+                onChange={(kind) => updateSection(i, { kind: kind as MeetingSectionKind, title: KIND_LABELS[kind as MeetingSectionKind] })}
+                options={SECTION_KINDS.map((k) => ({ value: k, label: KIND_LABELS[k] }))}
+                className="w-[160px]"
+              />
               <input
                 type="text"
                 value={s.title}

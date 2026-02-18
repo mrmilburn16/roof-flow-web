@@ -1,12 +1,52 @@
 "use client";
 
-import { MessageCircle, Building2, LayoutGrid, Cloud, Plug2, Sparkles } from "lucide-react";
+import { useState } from "react";
+import { MessageCircle, Building2, LayoutGrid, Cloud, Plug2 } from "lucide-react";
 import { PageTitle } from "@/components/ui";
+
+/** Slack from World Vector Logo; Acculynx, Buildertrend, Microsoft 365 icons disabled for now */
+const LOGOS = {
+  slack: "https://cdn.worldvectorlogo.com/logos/slack-new-logo.svg",
+  acculynx: null as string | null,
+  buildertrend: null as string | null,
+  microsoft365: null as string | null,
+} as const;
+
+function IntegrationLogo({
+  logoUrl,
+  fallbackIcon: Icon,
+  sizeClass = "size-6",
+  containerClass = "",
+}: {
+  logoUrl: string | null;
+  fallbackIcon: React.ComponentType<{ className?: string; strokeWidth?: number }>;
+  sizeClass?: string;
+  containerClass?: string;
+}) {
+  const [failed, setFailed] = useState(false);
+  const showFallback = failed || logoUrl == null;
+  if (showFallback) {
+    return (
+      <span className={`flex items-center justify-center ${containerClass}`}>
+        <Icon className={sizeClass} strokeWidth={2} />
+      </span>
+    );
+  }
+  return (
+    <img
+      src={logoUrl}
+      alt=""
+      className={`object-contain ${sizeClass}`}
+      onError={() => setFailed(true)}
+    />
+  );
+}
 
 const IN_DEV = {
   id: "slack",
   name: "Slack",
   description: "Get meeting recaps, to-dos, and scorecard updates in your channels. We're building it.",
+  logoUrl: LOGOS.slack,
   icon: MessageCircle,
   status: "in_development" as const,
 };
@@ -16,18 +56,21 @@ const ROADMAP = [
     id: "acculynx",
     name: "Acculynx",
     description: "Sync jobs and schedules with your roofing workflow.",
+    logoUrl: LOGOS.acculynx,
     icon: Building2,
   },
   {
     id: "buildertrend",
     name: "Buildertrend",
     description: "Connect project and client data to goals and meetings.",
+    logoUrl: LOGOS.buildertrend,
     icon: LayoutGrid,
   },
   {
     id: "microsoft365",
     name: "Microsoft 365",
     description: "Calendar, Teams, and Outlook where you already work.",
+    logoUrl: LOGOS.microsoft365,
     icon: Cloud,
   },
 ] as const;
@@ -46,7 +89,11 @@ export default function IntegrationsPage() {
             Connect your stack
           </h1>
           <p className="mt-3 max-w-xl text-[16px] leading-relaxed text-[var(--helper-text)]">
-            RoofFlow will plug into the tools you already use. First up: Slack. Then Acculynx, Buildertrend, and Microsoft 365.
+            RoofFlow will plug into the tools you already use.
+            <br />
+            First up: Slack.
+            <br />
+            Then Acculynx, Buildertrend, and Microsoft 365.
           </p>
         </div>
         <div
@@ -82,13 +129,16 @@ export default function IntegrationsPage() {
             boxShadow: "var(--shadow-card), 0 0 0 1px var(--badge-info-text) inset",
           }}
         >
-          <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
-            <div className="flex gap-4">
+          <div className="flex gap-4">
               <div
-                className="flex size-14 shrink-0 items-center justify-center rounded-2xl border-2 border-[var(--badge-info-text)]/30 bg-[var(--badge-info-bg)] text-[var(--badge-info-text)]"
+                className="flex size-14 shrink-0 items-center justify-center rounded-2xl border-2 border-[var(--badge-info-text)]/30 bg-[var(--surface)] p-2.5 text-[var(--badge-info-text)]"
                 aria-hidden
               >
-                <IN_DEV.icon className="size-7" strokeWidth={2} />
+                <IntegrationLogo
+                  logoUrl={IN_DEV.logoUrl}
+                  fallbackIcon={IN_DEV.icon}
+                  sizeClass="size-8"
+                />
               </div>
               <div>
                 <div className="flex flex-wrap items-center gap-2">
@@ -107,11 +157,6 @@ export default function IntegrationsPage() {
                   {IN_DEV.description}
                 </p>
               </div>
-            </div>
-            <div className="flex items-center gap-2 rounded-[var(--radius)] bg-[var(--muted-bg)] px-4 py-2 text-[13px] text-[var(--text-secondary)] sm:shrink-0">
-              <Sparkles className="size-4 text-[var(--badge-info-text)]" aria-hidden />
-              <span>We're on it</span>
-            </div>
           </div>
         </div>
       </section>
@@ -127,15 +172,17 @@ export default function IntegrationsPage() {
           </h2>
         </div>
         <div className="grid gap-4 sm:grid-cols-3">
-          {ROADMAP.map((item) => {
-            const Icon = item.icon;
-            return (
+          {ROADMAP.map((item) => (
               <div
                 key={item.id}
                 className="flex flex-col rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[var(--shadow-sm)] transition hover:border-[var(--text-muted)]/40 hover:shadow-[var(--shadow-card)]"
               >
-                <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-[var(--muted-bg)] text-[var(--text-muted)]">
-                  <Icon className="size-6" strokeWidth={2} />
+                <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-[var(--muted-bg)] p-2 text-[var(--text-muted)]">
+                  <IntegrationLogo
+                    logoUrl={item.logoUrl}
+                    fallbackIcon={item.icon}
+                    sizeClass="size-8"
+                  />
                 </div>
                 <h3 className="mt-4 text-[15px] font-semibold text-[var(--text-primary)]">
                   {item.name}
@@ -147,8 +194,7 @@ export default function IntegrationsPage() {
                   On the roadmap
                 </p>
               </div>
-            );
-          })}
+            ))}
         </div>
       </section>
 

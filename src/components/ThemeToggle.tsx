@@ -32,14 +32,14 @@ export function ThemeToggle() {
                   ? {
                       background: "var(--nav-active-bg)",
                       boxShadow: "var(--nav-active-shadow)",
-                      color: "#ffffff",
+                      color: "var(--nav-active-text)",
                     }
                   : undefined
               }
               className={[
                 "flex flex-1 items-center justify-center gap-1.5 rounded-md py-2 text-[12px] font-medium transition",
                 active
-                  ? "!text-white"
+                  ? "text-[var(--nav-active-text)]"
                   : "text-[var(--text-muted)] hover:bg-[var(--nav-hover-bg)] hover:text-[var(--text-secondary)]",
               ].join(" ")}
             >
