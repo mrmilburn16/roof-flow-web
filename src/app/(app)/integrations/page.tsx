@@ -115,6 +115,8 @@ function IntegrationsContent() {
     window.location.href = "/api/slack/oauth";
   };
 
+  const showAsConnected = Boolean(slackStatus?.connected || message === "connected");
+
   const selectChannel = async (channelId: string, channelName: string) => {
     setSetChannelLoadingId(channelId);
     try {
@@ -215,34 +217,42 @@ function IntegrationsContent() {
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2">
                 <h3 className="text-[18px] font-semibold text-[var(--text-primary)]">Slack</h3>
-                {slackStatus?.connected && (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-[var(--badge-success-bg)] px-2 py-0.5 text-[11px] font-semibold text-[var(--badge-success-text)]">
-                    <Check className="size-3" /> Connected
+                {showAsConnected && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-[var(--badge-success-bg)] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-[var(--badge-success-text)]">
+                    <Check className="size-3.5" strokeWidth={2.5} aria-hidden /> Connected
                   </span>
                 )}
               </div>
               <p className="mt-2 text-[14px] leading-relaxed text-[var(--helper-text)]">
                 Post in a channel to create to-dos. We show who added each item and link back to the message.
               </p>
-              {message === "connected" && (
-                <p className="mt-2 text-[14px] text-[var(--badge-success-text)]">Slack connected. Pick a channel below.</p>
-              )}
               {message === "error" && (
                 <p className="mt-2 text-[14px] text-[var(--badge-warning-text)]">Slack connection failed. Try again.</p>
               )}
-              {!slackLoading && !slackStatus?.connected && (
+              {message === "connected" && !slackStatus?.connected && !slackLoading && (
+                <p className="mt-2 text-[13px] text-[var(--text-muted)]">If channels don’t load, the connection may not have been saved. <button type="button" onClick={connectSlack} className="font-medium text-[var(--badge-info-text)] underline hover:no-underline">Reconnect</button></p>
+              )}
+              {!slackLoading && !showAsConnected && (
                 <button type="button" onClick={connectSlack} className={btnPrimary + " mt-4 inline-flex gap-2"}>
                   <MessageCircle className="size-4" />
                   Connect to Slack
                 </button>
               )}
-              {slackStatus?.connected && (
+              {!slackLoading && showAsConnected && (
+                <div className="mt-4 inline-flex cursor-default items-center gap-2 rounded-[var(--radius)] bg-emerald-500 px-4 py-2.5 font-semibold text-white shadow-sm">
+                  <Check className="size-4" strokeWidth={2.5} aria-hidden />
+                  Connected
+                </div>
+              )}
+              {showAsConnected && (
                 <div className="mt-6">
                   <div className="text-[13px] font-medium text-[var(--text-secondary)]">To-do channel</div>
                   <p className="mt-1 text-[13px] text-[var(--text-muted)]">
                     Messages in the selected channel become to-dos. Invite the Roof Flow app to the channel in Slack if needed.
                   </p>
-                  {channelLoading ? (
+                  {slackLoading ? (
+                    <p className="mt-3 text-[13px] text-[var(--text-muted)]">Setting up…</p>
+                  ) : channelLoading ? (
                     <p className="mt-3 text-[13px] text-[var(--text-muted)]">Loading channels…</p>
                   ) : (
                     <div className="mt-3 space-y-2">

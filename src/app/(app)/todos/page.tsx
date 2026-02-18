@@ -284,8 +284,15 @@ export default function TodosPage() {
             aria-modal="true"
             aria-labelledby="delete-todo-title"
           >
-            <div className="absolute inset-0 bg-black/50" onClick={() => setDeleteConfirmId(null)} aria-hidden />
-            <div className="relative w-full max-w-sm rounded-[var(--radius-lg)] border border-[var(--surface-border)] bg-[var(--surface)] p-6 shadow-[var(--shadow-card)]">
+            <div
+              className="absolute inset-0 z-0 bg-black/50"
+              onClick={() => setDeleteConfirmId(null)}
+              aria-hidden
+            />
+            <div
+              className="relative z-10 w-full max-w-sm rounded-[var(--radius-lg)] border border-[var(--surface-border)] bg-[var(--surface)] p-6 shadow-[var(--shadow-card)]"
+              onClick={(e) => e.stopPropagation()}
+            >
               <h2 id="delete-todo-title" className="text-[16px] font-semibold text-[var(--text-primary)]">
                 Delete to-do?
               </h2>
@@ -299,8 +306,9 @@ export default function TodosPage() {
                 <button
                   type="button"
                   onClick={() => {
-                    deleteTodo(deleteConfirmId);
+                    const idToDelete = deleteConfirmId;
                     setDeleteConfirmId(null);
+                    deleteTodo(idToDelete);
                     toast("To-do deleted", "success");
                   }}
                   className={btnPrimary + " bg-[var(--badge-warning-bg)] text-[var(--badge-warning-text)] hover:opacity-90"}
