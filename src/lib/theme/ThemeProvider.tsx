@@ -25,10 +25,10 @@ export const THEMES: ThemeMeta[] = [
 const STORAGE_KEY = "roofflow-theme";
 
 function readStoredTheme(): ThemeId {
-  if (typeof window === "undefined") return "dawn";
+  if (typeof window === "undefined") return "slate";
   const raw = localStorage.getItem(STORAGE_KEY);
   if (raw === "dawn" || raw === "slate" || raw === "onyx") return raw;
-  return "dawn";
+  return "slate";
 }
 
 type ThemeContextValue = {
@@ -39,7 +39,7 @@ type ThemeContextValue = {
 const Ctx = createContext<ThemeContextValue | null>(null);
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setThemeState] = useState<ThemeId>("dawn");
+  const [theme, setThemeState] = useState<ThemeId>("slate");
 
   useEffect(() => {
     setThemeState(readStoredTheme());

@@ -27,7 +27,7 @@ export default function RootLayout({
       <head>
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){var t=localStorage.getItem("roofflow-theme");if(t==="dawn"||t==="slate"||t==="onyx")document.documentElement.setAttribute("data-theme",t);})();`,
+            __html: `(function(){var t=localStorage.getItem("roofflow-theme");if(t==="dawn"||t==="slate"||t==="onyx")document.documentElement.setAttribute("data-theme",t);else document.documentElement.setAttribute("data-theme","slate");})();`,
           }}
         />
       </head>

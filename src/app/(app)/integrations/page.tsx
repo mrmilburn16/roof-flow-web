@@ -208,9 +208,11 @@ function IntegrationsContent() {
         setSlackChannels((prev) => (prev ?? []).concat([{ id: data.channel!.id, name: data.channel!.name }]));
         await selectChannel(data.channel.id, data.channel.name);
         setNewChannelName("");
-      } else if (data.error) {
-        alert(data.error);
+      } else {
+        alert(data.error || (res.ok ? "" : `Request failed (${res.status}). Check that the Slack app has the channels:manage scope and was reinstalled.`));
       }
+    } catch (e) {
+      alert("Could not create channel. Check the network and try again.");
     } finally {
       setCreatingChannel(false);
     }

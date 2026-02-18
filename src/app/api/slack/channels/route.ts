@@ -50,16 +50,25 @@ export async function POST(request: NextRequest) {
     headers: { "Content-Type": "application/json; charset=utf-8", Authorization: `Bearer ${token}` },
     body: JSON.stringify({ name }),
   });
-  const data = (await res.json()) as { ok?: boolean; error?: string; channel?: { id: string; name: string } };
+  const data = (await res.json()) as { ok?: boolean; error?: string; needed?: string; channel?: { id: string; name: string } };
+  if (process.env.NODE_ENV !== "test") {
+    console.info("[Slack create channel] name=%s status=%s ok=%s error=%s channel=%s", name, res.status, data.ok, data.error ?? "-", data.channel ? `${data.channel.id}/${data.channel.name}` : "-");
+  }
   if (!data.ok) {
     const slackError = (data.error ?? "unknown").toString();
+    const needed = (data.needed ?? "").toString();
     const msg =
       slackError === "name_taken"
         ? "A channel with that name already exists."
         : slackError === "invalid_name"
           ? "Channel name not allowed. Use only lowercase letters, numbers, hyphens, and underscores (e.g. roof-flow-todos)."
-          : slackError;
+          : slackError === "missing_scope" || needed
+            ? `Slack needs the ${needed || "channels:manage"} scope. Add it in your Slack app under OAuth & Permissions → Bot Token Scopes, then reinstall the app.`
+            : slackError;
     return NextResponse.json({ error: msg }, { status: slackError === "name_taken" ? 409 : 502 });
   }
-  return NextResponse.json({ channel: { id: data.channel!.id, name: data.channel!.name } });
+  if (!data.channel) {
+    return NextResponse.json({ error: "Slack did not return the new channel." }, { status: 502 });
+  }
+  return NextResponse.json({ channel: { id: data.channel.id, name: data.channel.name } });
 }

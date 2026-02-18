@@ -58,18 +58,31 @@ export async function POST(request: NextRequest) {
   if (!text) return NextResponse.json({ ok: true });
 
   const db = getAdminDb();
-  if (!db) return NextResponse.json({ ok: true });
+  if (!db) {
+    console.warn("[Slack events] No Firestore (getAdminDb null). Set FIREBASE_SERVICE_ACCOUNT_JSON and ensure Firestore is enabled.");
+    return NextResponse.json({ ok: true });
+  }
 
   const config = await getSlackConfig();
   const channelId = config?.channelId ?? undefined;
   const token = config?.accessToken;
-  if (!channelId || event.channel !== channelId || !token) {
+  if (!token) {
+    console.warn("[Slack events] No Slack token in config. Reconnect Slack in Integrations and pick a channel.");
+    return NextResponse.json({ ok: true });
+  }
+  if (!channelId) {
+    console.warn("[Slack events] No to-do channel selected. In Integrations, pick a channel in the dropdown.");
+    return NextResponse.json({ ok: true });
+  }
+  if (event.channel !== channelId) {
     return NextResponse.json({ ok: true });
   }
 
   const channelName = config?.channelName ?? "";
   const slackTeamId = config?.slackTeamId ?? "";
-  if (slackTeamId && payload.team_id !== slackTeamId) return NextResponse.json({ ok: true });
+  if (slackTeamId && payload.team_id !== slackTeamId) {
+    return NextResponse.json({ ok: true });
+  }
 
   const existingSnap = await db
     .collection("companies")
@@ -105,20 +118,27 @@ export async function POST(request: NextRequest) {
     .doc(TEAM_ID)
     .collection("todos")
     .doc(todoId);
-  await todoRef.set({
-    id: todoId,
-    title,
-    status: "open",
-    createdAt: now,
-    source: "slack",
-    sourceMeta: {
-      slackChannelId: event.channel,
-      slackChannelName: channelName,
-      slackMessageTs: event.ts,
-      slackMessageUrl,
-      slackUserDisplayName,
-    },
-  });
+  try {
+    await todoRef.set({
+      id: todoId,
+      title,
+      status: "open",
+      createdAt: now,
+      source: "slack",
+      sourceMeta: {
+        slackChannelId: event.channel,
+        slackChannelName: channelName,
+        slackMessageTs: event.ts,
+        slackMessageUrl,
+        slackUserDisplayName,
+      },
+    });
+  } catch (err) {
+    console.error("[Slack events] Firestore write failed", err);
+    return NextResponse.json({ ok: true });
+  }
+
+  console.info("[Slack events] Created to-do from message", { todoId, title: title.slice(0, 50), channel: event.channel });
 
   const replyRes = await fetch("https://slack.com/api/chat.postMessage", {
     method: "POST",

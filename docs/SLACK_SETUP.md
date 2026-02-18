@@ -134,7 +134,14 @@ If you post in the channel but the to-do doesn’t appear in the web app, check:
    Set `NEXT_PUBLIC_USE_FIRESTORE=true` in Vercel (or your host). The To-Dos page reads from Firestore; if this is off, new to-dos from Slack won’t show.
 
 5. **Vercel / server logs**  
-   In Vercel → Project → **Logs** or **Functions**, look for requests to `/api/slack/events` when you post in Slack. If you see 401, the Request URL or signing secret may be wrong. If you see 200 but no to-do, the event may be ignored (e.g. channel mismatch, or no `channelId` in config).
+   In Vercel → Project → **Logs** or **Functions**, look for requests to `/api/slack/events` when you post in Slack. If you see 401, the Request URL or signing secret may be wrong. If you see 200 but no to-do, check for these messages:
+   - `[Slack events] No Firestore` → set `FIREBASE_SERVICE_ACCOUNT_JSON` and ensure Firestore is enabled.
+   - `[Slack events] No Slack token` → reconnect Slack in Integrations and pick a channel.
+   - `[Slack events] No to-do channel selected` → in Integrations, choose a channel in the dropdown.
+   - `[Slack events] Firestore write failed` → Firebase permissions or network issue.
+   - `[Slack events] Created to-do from message` → the to-do was created; if it doesn’t show in the app, ensure `NEXT_PUBLIC_USE_FIRESTORE=true` and the To-Dos page reads from Firestore.
+
+   For **Create channel** not appearing in Slack: check logs for `[Slack create channel]` — they show the Slack API response (`ok`, `error`, `channel`). If `error` is `missing_scope`, add `channels:manage` and reinstall the app.
 
 ## 7. Removing the test Slack channel
 
