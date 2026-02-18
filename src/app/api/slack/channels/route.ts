@@ -32,9 +32,18 @@ export async function POST(request: NextRequest) {
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
-  const name = typeof body.name === "string" ? body.name.trim().toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9_-]/g, "") : "";
+  const raw = typeof body.name === "string" ? body.name.trim() : "";
+  const name = raw
+    .toLowerCase()
+    .replace(/\s+/g, "-")
+    .replace(/[^a-z0-9_-]/g, "")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "")
+    .slice(0, 80);
   if (!name || name.length < 2) {
-    return NextResponse.json({ error: "Channel name must be at least 2 characters (letters, numbers, hyphens, underscores)" }, { status: 400 });
+    return NextResponse.json({
+      error: "Use at least 2 characters. Only letters, numbers, hyphens, and underscores (e.g. roof-flow-todos).",
+    }, { status: 400 });
   }
   const res = await fetch("https://slack.com/api/conversations.create", {
     method: "POST",
@@ -43,8 +52,14 @@ export async function POST(request: NextRequest) {
   });
   const data = (await res.json()) as { ok?: boolean; error?: string; channel?: { id: string; name: string } };
   if (!data.ok) {
-    const msg = data.error === "name_taken" ? "A channel with that name already exists." : (data.error || "Slack API error");
-    return NextResponse.json({ error: msg }, { status: data.error === "name_taken" ? 409 : 502 });
+    const slackError = (data.error ?? "unknown").toString();
+    const msg =
+      slackError === "name_taken"
+        ? "A channel with that name already exists."
+        : slackError === "invalid_name"
+          ? "Channel name not allowed. Use only lowercase letters, numbers, hyphens, and underscores (e.g. roof-flow-todos)."
+          : slackError;
+    return NextResponse.json({ error: msg }, { status: slackError === "name_taken" ? 409 : 502 });
   }
   return NextResponse.json({ channel: { id: data.channel!.id, name: data.channel!.name } });
 }

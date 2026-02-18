@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifySlackRequest } from "@/lib/slack/verify";
 import { getAdminDb } from "@/lib/firebase/admin";
+import { getSlackConfig } from "@/lib/slack/config";
 
 const SLACK_SIGNING_SECRET = process.env.SLACK_SIGNING_SECRET;
 const COMPANY_ID = process.env.NEXT_PUBLIC_COMPANY_ID || "c_roofco";
@@ -59,23 +60,15 @@ export async function POST(request: NextRequest) {
   const db = getAdminDb();
   if (!db) return NextResponse.json({ ok: true });
 
-  const configSnap = await db
-    .collection("companies")
-    .doc(COMPANY_ID)
-    .collection("teams")
-    .doc(TEAM_ID)
-    .collection("config")
-    .doc("slack")
-    .get();
-  const config = configSnap.data();
-  const channelId = config?.channelId as string | undefined;
-  const token = config?.accessToken as string | undefined;
+  const config = await getSlackConfig();
+  const channelId = config?.channelId ?? undefined;
+  const token = config?.accessToken;
   if (!channelId || event.channel !== channelId || !token) {
     return NextResponse.json({ ok: true });
   }
 
-  const channelName = (config?.channelName as string) ?? "";
-  const slackTeamId = config?.slackTeamId as string | undefined;
+  const channelName = config?.channelName ?? "";
+  const slackTeamId = config?.slackTeamId ?? "";
   if (slackTeamId && payload.team_id !== slackTeamId) return NextResponse.json({ ok: true });
 
   const existingSnap = await db

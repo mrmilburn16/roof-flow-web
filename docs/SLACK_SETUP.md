@@ -115,7 +115,28 @@ If you don’t pick a channel in step 2, no Slack messages will create to-dos.
 4. In Slack, invite the Roof Flow app to that channel (open the channel → Integrations → Add apps).
 5. Post a message in the channel (e.g. "Call Brian"). It appears as an open to-do in Roof Flow with "From Slack · @yourname" and a "View in Slack" link. The app replies in the thread: "Created to-do: Call Brian."
 
-## 6. Removing the test Slack channel
+## 6. Message didn’t create a to-do?
+
+If you post in the channel but the to-do doesn’t appear in the web app, check:
+
+1. **Channel selected in Roof Flow**  
+   Integrations → the same channel must be chosen in the “Select channel” dropdown. Only that channel is used for to-dos.
+
+2. **App is in the channel**  
+   In Slack, open that channel → **Integrations** (or the channel name) → **Add apps** → add your Roof Flow app. If the app isn’t in the channel, Slack won’t send message events.
+
+3. **Slack Event Subscriptions**  
+   In [api.slack.com/apps](https://api.slack.com/apps) → your app → **Event Subscriptions**:  
+   - **Request URL** = `https://your-domain.com/api/slack/events` (must be verified).  
+   - Under **Subscribe to bot events**, you have **message.channels**.
+
+4. **Web app uses Firestore**  
+   Set `NEXT_PUBLIC_USE_FIRESTORE=true` in Vercel (or your host). The To-Dos page reads from Firestore; if this is off, new to-dos from Slack won’t show.
+
+5. **Vercel / server logs**  
+   In Vercel → Project → **Logs** or **Functions**, look for requests to `/api/slack/events` when you post in Slack. If you see 401, the Request URL or signing secret may be wrong. If you see 200 but no to-do, the event may be ignored (e.g. channel mismatch, or no `channelId` in config).
+
+## 7. Removing the test Slack channel
 
 To remove the Slack integration or the test channel:
 

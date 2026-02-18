@@ -188,7 +188,13 @@ function IntegrationsContent() {
   };
 
   const createChannel = async () => {
-    const name = newChannelName.trim().toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9_-]/g, "");
+    const name = newChannelName
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, "-")
+      .replace(/[^a-z0-9_-]/g, "")
+      .replace(/-+/g, "-")
+      .replace(/^-|-$/g, "");
     if (!name || name.length < 2) return;
     setCreatingChannel(true);
     try {
@@ -350,6 +356,7 @@ function IntegrationsContent() {
                           className={inputBase + " w-48"}
                           aria-label="New channel name"
                         />
+                        <span className="text-[12px] text-[var(--text-muted)]">Letters, numbers, hyphens, underscores</span>
                         <button
                           type="button"
                           onClick={createChannel}
