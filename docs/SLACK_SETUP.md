@@ -2,27 +2,49 @@
 
 To connect Roof Flow to Slack so that messages in a channel create to-dos, set up a Slack app and configure the app and environment.
 
+## Scopes to add (Bot Token Scopes)
+
+In your Slack app, go to **OAuth & Permissions** and under **Scopes** > **Bot Token Scopes** add exactly these:
+
+| Scope | Purpose |
+|-------|--------|
+| `channels:read` | List public channels (channel picker) |
+| `channels:manage` | Create new channels ("Add new channel") |
+| `channels:history` | Receive message events in public channels |
+| `chat:write` | Post "Created to-do" reply in the thread |
+| `users:read` | Show "From Slack · @displayname" on to-dos |
+| `groups:read` | *(Optional)* List/use private channels |
+
+Copy-paste list for the Slack UI (one per line):
+
+```
+channels:read
+channels:manage
+channels:history
+chat:write
+users:read
+groups:read
+```
+
+(Omit `groups:read` if you only use public channels.)
+
+---
+
 ## 1. Create a Slack app
 
 1. Go to [api.slack.com/apps](https://api.slack.com/apps) and click **Create New App** > **From scratch**.
 2. Name the app (e.g. "Roof Flow") and pick your workspace for development.
-3. After creation, open **OAuth & Permissions** and add these **Bot Token Scopes**:
-   - `channels:read` – list public channels
-   - `channels:manage` – create public channels
-   - `channels:history` – read messages in public channels (for Events API)
-   - `chat:write` – post "Created to-do" in the thread
-   - `users:read` – resolve user display name for "From Slack · @name"
-   - `groups:read` – if you want to support private channels (optional)
+3. Open **OAuth & Permissions** and add the **Bot Token Scopes** from the table above (or the copy-paste list).
 4. Under **Event Subscriptions**, turn **Enable Events** On.
-5. Set **Request URL** to your public Events API endpoint, e.g.:
+5. Set **Request URL** to your public Events API endpoint:
    - Production: `https://your-domain.com/api/slack/events`
-   - Local: use a tunnel (e.g. ngrok: `ngrok http 3000`) and set Request URL to `https://<your-ngrok-id>.ngrok.io/api/slack/events`
+   - Local: use a tunnel (e.g. `ngrok http 3000`) and set Request URL to `https://<your-ngrok-id>.ngrok.io/api/slack/events`
 6. Under **Subscribe to bot events**, add:
    - `message.channels` – new messages in public channels the app is in
 7. Save changes. Slack will send a request to your URL for verification; the route responds with the `challenge` value.
-8. Under **OAuth & Permissions**, add **Redirect URL**:  
-   `https://your-domain.com/api/slack/callback` (or your ngrok URL for local).
-9. Install the app to your workspace (**Install to Workspace**) and copy the **Bot User OAuth Token** if you need it for testing. The Roof Flow OAuth flow will install the app when users click "Connect to Slack".
+8. Back under **OAuth & Permissions**, add a **Redirect URL**:
+   - `https://your-domain.com/api/slack/callback` (or your ngrok URL for local).
+9. Install the app to your workspace (**Install to Workspace**) if you want to test immediately. When users click "Connect to Slack" in Roof Flow, they will go through OAuth and install the app to their workspace.
 
 ## 2. Environment variables
 

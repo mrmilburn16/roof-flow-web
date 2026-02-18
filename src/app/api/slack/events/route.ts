@@ -10,10 +10,6 @@ const TITLE_MAX_LEN = 500;
 
 export async function POST(request: NextRequest) {
   const rawBody = await request.text();
-  const signature = request.headers.get("x-slack-signature") ?? null;
-  if (!SLACK_SIGNING_SECRET || !verifySlackRequest(rawBody, signature, SLACK_SIGNING_SECRET)) {
-    return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
-  }
 
   let payload: {
     type?: string;
@@ -35,8 +31,14 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
+  // Respond to url_verification immediately so Slack can verify the Request URL (no signature check needed for this).
   if (payload.type === "url_verification" && typeof payload.challenge === "string") {
     return NextResponse.json({ challenge: payload.challenge });
+  }
+
+  const signature = request.headers.get("x-slack-signature") ?? null;
+  if (!SLACK_SIGNING_SECRET || !verifySlackRequest(rawBody, signature, SLACK_SIGNING_SECRET)) {
+    return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
   }
 
   if (payload.type !== "event_callback" || !payload.event) {
