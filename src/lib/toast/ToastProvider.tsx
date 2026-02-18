@@ -1,6 +1,7 @@
 "use client";
 
 import React, { createContext, useCallback, useContext, useRef, useState } from "react";
+import { CheckCircle2, AlertCircle, Info, X } from "lucide-react";
 
 export type ToastType = "success" | "error" | "info";
 
@@ -106,30 +107,57 @@ function ToastItem({
   exiting: boolean;
   onDismiss: () => void;
 }) {
-  const typeStyles =
-    toast.type === "success"
-      ? "border-l-4 border-l-[var(--badge-success-bg)] bg-[var(--surface)]"
-      : toast.type === "error"
-        ? "border-l-4 border-l-[var(--badge-warning-bg)] bg-[var(--surface)]"
-        : "bg-[var(--surface)]";
+  const isSuccess = toast.type === "success";
+  const isError = toast.type === "error";
+
+  const wrapperStyles =
+    isSuccess
+      ? "bg-[var(--badge-success-bg)] border-[var(--badge-success-text)]/25"
+      : isError
+        ? "bg-[var(--badge-warning-bg)] border-[var(--badge-warning-text)]/25"
+        : "bg-[var(--badge-info-bg)] border-[var(--badge-info-text)]/25";
+
+  const iconColor =
+    isSuccess
+      ? "text-[var(--badge-success-text)]"
+      : isError
+        ? "text-[var(--badge-warning-text)]"
+        : "text-[var(--badge-info-text)]";
+
+  const progressColor =
+    isSuccess
+      ? "bg-[var(--badge-success-text)]"
+      : isError
+        ? "bg-[var(--badge-warning-text)]"
+        : "bg-[var(--badge-info-text)]";
+
+  const Icon = isSuccess ? CheckCircle2 : isError ? AlertCircle : Info;
 
   return (
     <div
       role="status"
-      className={`toast-item flex items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--surface-border)] px-4 py-3 text-[14px] shadow-[var(--shadow-card)] ${typeStyles} ${exiting ? "toast-exit" : ""}`}
+      className={`toast-item overflow-hidden rounded-[var(--radius-xl)] border shadow-[var(--shadow-toast)] ${wrapperStyles} ${exiting ? "toast-exit" : ""}`}
       data-toast-type={toast.type}
+      style={{ "--toast-duration": `${TOAST_DURATION_MS}ms` } as React.CSSProperties}
     >
-      <span className="flex-1 font-medium text-[var(--text-primary)]">{toast.message}</span>
-      <button
-        type="button"
-        onClick={onDismiss}
-        className="shrink-0 rounded-[var(--radius)] p-1.5 text-[var(--text-muted)] transition hover:bg-[var(--nav-hover-bg)] hover:text-[var(--text-primary)]"
-        aria-label="Dismiss"
-      >
-        <svg className="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-        </svg>
-      </button>
+      <div className="flex items-center gap-3 px-4 py-3.5">
+        <Icon className={`size-5 shrink-0 ${iconColor}`} aria-hidden />
+        <span className="min-w-0 flex-1 text-[14px] font-medium text-[var(--text-primary)]">
+          {toast.message}
+        </span>
+        <button
+          type="button"
+          onClick={onDismiss}
+          className="shrink-0 rounded-[var(--radius)] p-2 text-[var(--text-muted)] transition hover:bg-black/5 hover:text-[var(--text-primary)]"
+          aria-label="Dismiss"
+        >
+          <X className="size-4" aria-hidden />
+        </button>
+      </div>
+      <div
+        className={`toast-progress-bar h-0.5 ${progressColor} opacity-60`}
+        aria-hidden
+      />
     </div>
   );
 }

@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useRef } from "react";
 import { Plus, CheckSquare, Square, Play, User, RotateCcw } from "lucide-react";
 import { useMockDb } from "@/lib/mock/MockDbProvider";
+import { useToast } from "@/lib/toast/ToastProvider";
 import { PageTitle, card, inputBase, btnPrimary, btnSecondary } from "@/components/ui";
 
 function ordinal(n: number): string {
@@ -43,7 +44,9 @@ const RECENT_DONE_COUNT = 10;
 
 export default function TodosPage() {
   const { db, createTodo, toggleTodo } = useMockDb();
+  const { toast } = useToast();
   const [title, setTitle] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const openTodos = useMemo(() => {
     const open = db.todos.filter((t) => t.status === "open");
@@ -113,22 +116,25 @@ export default function TodosPage() {
             onSubmit={(e) => {
               e.preventDefault();
               const trimmed = title.trim();
-              if (!trimmed) return;
+              if (!trimmed) {
+                toast("Enter a to-do title", "info");
+                inputRef.current?.focus();
+                return;
+              }
               createTodo(trimmed);
               setTitle("");
+              inputRef.current?.focus();
             }}
           >
             <input
+              ref={inputRef}
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="New To-Do"
               className={`${inputBase} w-full min-w-0 sm:w-64`}
+              aria-label="New to-do title"
             />
-            <button
-              type="submit"
-              className={`${btnPrimary} shrink-0`}
-              disabled={!title.trim()}
-            >
+            <button type="submit" className={`${btnPrimary} shrink-0`}>
               <Plus className="size-4" />
               Add
             </button>

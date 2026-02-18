@@ -14,6 +14,8 @@ export type Role = {
   id: string;
   name: string;
   permissionIds: PermissionCode[];
+  /** Parent role id for Accountability Chart hierarchy. Null = top level. */
+  parentRoleId?: string | null;
   createdAt: string; // ISO
 };
 

@@ -31,12 +31,33 @@
   --radius-xl: 16px;
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
   --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.04);
+  --shadow-toast: 0 4px 12px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.04);
   --badge-success-bg: #ecfdf5;
   --badge-success-text: #047857;
   --badge-warning-bg: #fffbeb;
   --badge-warning-text: #b45309;
+  --badge-info-bg: #eff6ff;
+  --badge-info-text: #1d4ed8;
   --badge-neutral-bg: #f4f4f5;
   --badge-neutral-text: #52525b;
+  --goal-btn-on-bg: #b8f0d8;
+  --goal-btn-off-bg: #fde68a;
+  --goal-btn-done-bg: #e4e4e7;
+  --stat-neutral: #71717a;
+  --stat-success: #059669;
+  --stat-warning: #c2410c;
+  --stat-info: #2563eb;
+  --quickstat-ring: rgba(0, 0, 0, 0.08);
+  --quickstat-neutral-bg: #334155;
+  --quickstat-neutral-text: #f8fafc;
+  --quickstat-success-bg: #047857;
+  --quickstat-success-text: #ecfdf5;
+  --quickstat-warning-bg: #c2410c;
+  --quickstat-warning-text: #fff7ed;
+  --quickstat-info-bg: #1d4ed8;
+  --quickstat-info-text: #eff6ff;
+  --quickstat-progress-bg: #6d28d9;
+  --quickstat-progress-text: #f5f3ff;
   --muted-bg: #f4f4f5;
 }
 
@@ -67,12 +88,33 @@
   --nav-hover-bg: #e2e8f2;
   --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06);
   --shadow-card: 0 1px 3px rgba(30, 64, 118, 0.06);
+  --shadow-toast: 0 4px 12px rgba(15, 23, 42, 0.1), 0 2px 4px rgba(30, 64, 118, 0.06);
   --badge-success-bg: #ecfdf5;
   --badge-success-text: #047857;
   --badge-warning-bg: #fffbeb;
   --badge-warning-text: #b45309;
+  --badge-info-bg: #dbeafe;
+  --badge-info-text: #1e40af;
   --badge-neutral-bg: #e8eef6;
   --badge-neutral-text: #475569;
+  --goal-btn-on-bg: #a7f3d0;
+  --goal-btn-off-bg: #fcd34d;
+  --goal-btn-done-bg: #cbd5e1;
+  --stat-neutral: #64748b;
+  --stat-success: #047857;
+  --stat-warning: #b45309;
+  --stat-info: #1e40af;
+  --quickstat-ring: rgba(15, 23, 42, 0.12);
+  --quickstat-neutral-bg: #334155;
+  --quickstat-neutral-text: #f8fafc;
+  --quickstat-success-bg: #047857;
+  --quickstat-success-text: #ecfdf5;
+  --quickstat-warning-bg: #c2410c;
+  --quickstat-warning-text: #fff7ed;
+  --quickstat-info-bg: #1d4ed8;
+  --quickstat-info-text: #eff6ff;
+  --quickstat-progress-bg: #6d28d9;
+  --quickstat-progress-text: #f5f3ff;
   --muted-bg: #e8eef6;
 }
 
@@ -103,12 +145,33 @@
   --nav-hover-bg: #2d2d31;
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
   --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.2);
+  --shadow-toast: 0 8px 24px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.2);
   --badge-success-bg: rgba(16, 185, 129, 0.2);
   --badge-success-text: #34d399;
   --badge-warning-bg: rgba(245, 158, 11, 0.2);
   --badge-warning-text: #fbbf24;
+  --badge-info-bg: rgba(59, 130, 246, 0.2);
+  --badge-info-text: #60a5fa;
   --badge-neutral-bg: rgba(255, 255, 255, 0.12);
   --badge-neutral-text: #b4b4be;
+  --goal-btn-on-bg: rgba(16, 185, 129, 0.35);
+  --goal-btn-off-bg: rgba(245, 158, 11, 0.35);
+  --goal-btn-done-bg: rgba(255, 255, 255, 0.18);
+  --stat-neutral: #a1a1aa;
+  --stat-success: #34d399;
+  --stat-warning: #fb923c;
+  --stat-info: #60a5fa;
+  --quickstat-ring: rgba(255, 255, 255, 0.14);
+  --quickstat-neutral-bg: #3f3f46;
+  --quickstat-neutral-text: #fafafa;
+  --quickstat-success-bg: #059669;
+  --quickstat-success-text: #ecfdf5;
+  --quickstat-warning-bg: #ea580c;
+  --quickstat-warning-text: #fff7ed;
+  --quickstat-info-bg: #2563eb;
+  --quickstat-info-text: #eff6ff;
+  --quickstat-progress-bg: #7c3aed;
+  --quickstat-progress-text: #f5f3ff;
   --muted-bg: #2d2d31;
 }
 
@@ -201,33 +264,129 @@ input[type="checkbox"]:focus-visible {
   animation: page-fade-in 0.28s ease-out backwards;
 }
 
-/* Toast notifications: top-right, theme-aware (Slate-style surface/border) */
+/* Toast notifications: elevated, type-aware, with progress */
 @keyframes toast-in {
   from {
     opacity: 0;
-    transform: translateX(100%);
+    transform: translateX(100%) scale(0.96);
   }
   to {
     opacity: 1;
-    transform: translateX(0);
+    transform: translateX(0) scale(1);
   }
 }
 
 @keyframes toast-out {
   from {
     opacity: 1;
-    transform: translateX(0);
+    transform: translateX(0) scale(1);
   }
   to {
     opacity: 0;
-    transform: translateX(100%);
+    transform: translateX(100%) scale(0.96);
+  }
+}
+
+@keyframes toast-progress {
+  from {
+    transform: scaleX(1);
+    transform-origin: left;
+  }
+  to {
+    transform: scaleX(0);
+    transform-origin: left;
   }
 }
 
 .toast-item {
-  animation: toast-in 0.3s ease-out;
+  animation: toast-in 0.35s cubic-bezier(0.21, 1.02, 0.73, 1);
 }
 
 .toast-item.toast-exit {
   animation: toast-out 0.25s ease-in forwards;
+}
+
+.toast-progress-bar {
+  animation: toast-progress var(--toast-duration, 7s) linear forwards;
+}
+
+/* Quick stats chips: solid, premium fills (Apple-esque) */
+.quickstat {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: 9999px;
+  padding: 0.5rem 0.875rem;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--quickstat-ring);
+  background-image: linear-gradient(to bottom, rgba(255, 255, 255, 0.12), rgba(0, 0, 0, 0.08));
+}
+
+.quickstat-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.quickstat[data-variant="neutral"] {
+  background-color: var(--quickstat-neutral-bg);
+  color: var(--quickstat-neutral-text);
+}
+.quickstat[data-variant="success"] {
+  background-color: var(--quickstat-success-bg);
+  color: var(--quickstat-success-text);
+}
+.quickstat[data-variant="warning"] {
+  background-color: var(--quickstat-warning-bg);
+  color: var(--quickstat-warning-text);
+}
+.quickstat[data-variant="info"] {
+  background-color: var(--quickstat-info-bg);
+  color: var(--quickstat-info-text);
+}
+.quickstat[data-variant="progress"] {
+  background-color: var(--quickstat-progress-bg);
+  color: var(--quickstat-progress-text);
+}
+
+/* Subtle banners (e.g., meeting canceled) */
+@keyframes banner-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.99);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.animate-banner-in {
+  animation: banner-in 220ms cubic-bezier(0.21, 1.02, 0.73, 1) both;
+}
+
+/* More reliable (mount + state) banner transition */
+.banner {
+  opacity: 0;
+  transform: translateY(-6px);
+  transition: opacity 220ms ease, transform 220ms ease;
+}
+
+.banner.banner--visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-banner-in {
+    animation: none;
+  }
+  .banner {
+    transition: none;
+    transform: none;
+    opacity: 1;
+  }
 }

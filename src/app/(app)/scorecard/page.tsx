@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
-import { TrendingUp, Calendar, Play, ChevronDown } from "lucide-react";
+import { useMemo, useState, useRef, useEffect } from "react";
+import { TrendingUp, Calendar, Play, ChevronDown, Check } from "lucide-react";
 import { useMockDb } from "@/lib/mock/MockDbProvider";
 import { startOfWeek } from "@/lib/mock/mockData";
 import { PageTitle, card, inputBase, btnPrimary, btnSecondary, StatusBadge } from "@/components/ui";
@@ -32,6 +32,19 @@ export default function ScorecardPage() {
   const { db, weekOf: currentWeekOf, upsertKpiEntry } = useMockDb();
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [selectedWeekOf, setSelectedWeekOf] = useState(currentWeekOf);
+  const [weekDropdownOpen, setWeekDropdownOpen] = useState(false);
+  const weekDropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!weekDropdownOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (weekDropdownRef.current && !weekDropdownRef.current.contains(e.target as Node)) {
+        setWeekDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [weekDropdownOpen]);
 
   const weekOptions = useMemo(() => {
     const base = startOfWeek(new Date());
@@ -115,25 +128,53 @@ export default function ScorecardPage() {
                   Weekly KPIs
                 </div>
                 <div className="mt-1 flex flex-wrap items-center gap-2">
-                  <div className="relative inline-block">
-                    <select
-                      value={selectedWeekOf}
-                      onChange={(e) => setSelectedWeekOf(e.target.value)}
-                      className={`${inputBase} w-auto min-w-[180px] pr-9 text-[13px]`}
+                  <div className="relative inline-block" ref={weekDropdownRef}>
+                    <button
+                      type="button"
+                      onClick={() => setWeekDropdownOpen((o) => !o)}
+                      className={`${inputBase} flex w-full min-w-[180px] items-center justify-between gap-2 pr-9 text-left text-[13px]`}
                       aria-label="Select week"
+                      aria-expanded={weekDropdownOpen}
+                      aria-haspopup="listbox"
                     >
-                      {weekOptions.map((w) => (
-                        <option key={w} value={w}>
-                          {w === currentWeekOf
-                            ? `This week (${formatWeekLabel(w)})`
-                            : formatWeekLabel(w)}
-                        </option>
-                      ))}
-                    </select>
+                      <span className="truncate">
+                        {selectedWeekOf === currentWeekOf
+                          ? `This week (${formatWeekLabel(selectedWeekOf)})`
+                          : formatWeekLabel(selectedWeekOf)}
+                      </span>
+                    </button>
                     <ChevronDown
                       className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-[var(--text-muted)]"
                       aria-hidden
                     />
+                    {weekDropdownOpen && (
+                      <ul
+                        className="absolute left-0 top-full z-10 mt-1 min-w-[180px] rounded-[var(--radius-lg)] border border-[var(--surface-border)] bg-[var(--surface)] py-1 shadow-[var(--shadow-card)]"
+                        role="listbox"
+                      >
+                        {weekOptions.map((w) => {
+                          const label = w === currentWeekOf ? `This week (${formatWeekLabel(w)})` : formatWeekLabel(w);
+                          const selected = w === selectedWeekOf;
+                          return (
+                            <li key={w} role="option" aria-selected={selected}>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setSelectedWeekOf(w);
+                                  setWeekDropdownOpen(false);
+                                }}
+                                className="flex w-full items-center gap-2 px-3 py-2 text-left text-[13px] text-[var(--text-primary)] transition hover:bg-[var(--nav-hover-bg)]"
+                              >
+                                <span className="flex w-4 shrink-0 justify-center">
+                                  {selected ? <Check className="size-4 text-[var(--text-primary)]" /> : null}
+                                </span>
+                                <span className={selected ? "font-medium" : ""}>{label}</span>
+                              </button>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    )}
                   </div>
                   <span className="flex items-center gap-1.5 text-[12px] text-[var(--text-muted)]">
                     <Calendar className="size-3.5" />

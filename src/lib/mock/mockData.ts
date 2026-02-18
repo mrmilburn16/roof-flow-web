@@ -12,6 +12,17 @@ import { ALL_PERMISSION_CODES } from "@/lib/domain";
 
 export type MeetingRunStatus = "scheduled" | "canceled";
 
+export type MeetingFeedback = {
+  rating: number;
+  comment?: string;
+};
+
+export type Vision = {
+  purpose: string;
+  coreValues: string[];
+  focus: string;
+};
+
 export type MockDb = {
   users: User[];
   roles: Role[];
@@ -24,6 +35,9 @@ export type MockDb = {
   meetingNotes: string;
   /** Week-of (ISO date) -> status. Defaults to "scheduled" when missing. */
   meetingRunStatus: Record<string, MeetingRunStatus>;
+  /** Week-of (ISO date) -> rating and optional comment after meeting. */
+  meetingFeedback: Record<string, MeetingFeedback>;
+  vision: Vision;
 };
 
 function iso(d: Date) {
@@ -48,29 +62,33 @@ export function createInitialMockDb(): MockDb {
   const now = new Date();
 
   const roles: Role[] = [
-    { id: "role_owner", name: "Owner", permissionIds: [...ALL_PERMISSION_CODES], createdAt: iso(now) },
+    { id: "role_owner", name: "Owner", permissionIds: [...ALL_PERMISSION_CODES], parentRoleId: null, createdAt: iso(now) },
     {
       id: "role_sales",
       name: "Sales",
       permissionIds: ["run_meeting", "view_meetings", "cancel_meeting", "edit_goals", "edit_scorecard", "edit_todos", "edit_issues"],
+      parentRoleId: "role_owner",
       createdAt: iso(now),
     },
     {
       id: "role_pm",
       name: "Project Manager",
       permissionIds: ["run_meeting", "view_meetings", "cancel_meeting", "edit_goals", "edit_scorecard", "edit_todos", "edit_issues"],
+      parentRoleId: "role_owner",
       createdAt: iso(now),
     },
     {
       id: "role_crew_lead",
       name: "Crew Lead",
       permissionIds: ["view_meetings", "edit_todos", "edit_issues"],
+      parentRoleId: "role_pm",
       createdAt: iso(now),
     },
     {
       id: "role_office",
       name: "Office Admin",
       permissionIds: ["run_meeting", "view_meetings", "edit_todos", "edit_issues"],
+      parentRoleId: "role_owner",
       createdAt: iso(now),
     },
   ];
@@ -206,6 +224,12 @@ export function createInitialMockDb(): MockDb {
     meetingTemplates,
     meetingNotes: "",
     meetingRunStatus: {},
+    meetingFeedback: {},
+    vision: {
+      purpose: "",
+      coreValues: [],
+      focus: "",
+    },
   };
 }
 

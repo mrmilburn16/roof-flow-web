@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useMemo } from "react";
 import { Calendar, CheckSquare, Target, AlertCircle, Play, TrendingUp } from "lucide-react";
 import { useMockDb } from "@/lib/mock/MockDbProvider";
+import { HomeQuickStats } from "@/components/HomeQuickStats";
 import { PageTitle, card, cardHeader, cardValue, btnPrimary, btnSecondary } from "@/components/ui";
 
 function formatWeek(weekOf: string) {
@@ -12,7 +13,8 @@ function formatWeek(weekOf: string) {
 }
 
 export default function HomePage() {
-  const { db, weekOf } = useMockDb();
+  const { db, weekOf, getMeetingRatingsAverage } = useMockDb();
+  const meetingRatingAvg = getMeetingRatingsAverage();
 
   const stats = useMemo(() => {
     const openTodos = db.todos.filter((t) => t.status === "open");
@@ -36,16 +38,16 @@ export default function HomePage() {
     };
   }, [db, weekOf]);
 
-  const cards = [
-    {
-      header: "Next meeting",
-      value: stats.meetingTitle,
-      sub: `Week of ${stats.weekFormatted}`,
-      icon: Calendar,
-      href: "/meetings/run",
-      label: "Run meeting",
-      primary: true,
-    },
+  const nextMeetingCard = {
+    header: "Next meeting",
+    value: stats.meetingTitle,
+    sub: `Week of ${stats.weekFormatted}`,
+    icon: Calendar,
+    href: "/meetings/run",
+    label: "Run meeting",
+  };
+
+  const otherCards = [
     {
       header: "Open to-dos",
       value: `${stats.openTodosCount} open`,
@@ -53,7 +55,6 @@ export default function HomePage() {
       icon: CheckSquare,
       href: "/todos",
       label: "View to-dos",
-      primary: false,
     },
     {
       header: "Quarterly goals",
@@ -62,7 +63,6 @@ export default function HomePage() {
       icon: Target,
       href: "/goals",
       label: "Review goals",
-      primary: false,
     },
     {
       header: "Open issues",
@@ -71,16 +71,14 @@ export default function HomePage() {
       icon: AlertCircle,
       href: "/issues",
       label: "View issues",
-      primary: false,
     },
     {
       header: "Scorecard",
       value: stats.scorecardTotal > 0 ? `${stats.scorecardOnTrack}/${stats.scorecardTotal} on track` : "No KPIs",
-      sub: `This week`,
+      sub: "This week",
       icon: TrendingUp,
       href: "/scorecard",
       label: "View scorecard",
-      primary: false,
     },
   ];
 
@@ -91,11 +89,64 @@ export default function HomePage() {
         subtitle="Capture during the week, then run the L10 and resolve."
       />
 
+      <HomeQuickStats
+        stats={{
+          openTodosCount: stats.openTodosCount,
+          offTrackGoalsCount: stats.offTrackGoalsCount,
+          openIssuesCount: stats.openIssuesCount,
+          scorecardOnTrack: stats.scorecardOnTrack,
+          scorecardTotal: stats.scorecardTotal,
+        }}
+      />
+
+      {/* Featured Next meeting + grid */}
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-        {cards.map((c) => {
+        {/* Hero card: Next meeting - spans 2 cols on large, primary CTA like competitors */}
+        <div className={`${card} flex min-h-[140px] flex-col justify-between p-5 sm:col-span-2`}>
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0 flex-1">
+              <div className={cardHeader}>{nextMeetingCard.header}</div>
+              <div className={`${cardValue} mt-2`}>{nextMeetingCard.value}</div>
+              {nextMeetingCard.sub && (
+                <div className="mt-1 text-[13px] text-[var(--text-muted)]">{nextMeetingCard.sub}</div>
+              )}
+              {meetingRatingAvg != null && (
+                <div className="mt-1 text-[13px] text-[var(--text-muted)]">
+                  Avg. meeting rating <span className="font-medium text-[var(--text-primary)]">{meetingRatingAvg}</span>/10
+                </div>
+              )}
+            </div>
+            <Calendar className="size-8 shrink-0 text-[var(--text-muted)]" />
+          </div>
+          <div className="mt-5">
+            <Link href={nextMeetingCard.href} className={btnPrimary + " inline-flex gap-2"}>
+              <Play className="size-4" />
+              {nextMeetingCard.label}
+            </Link>
+          </div>
+        </div>
+
+        {/* To-dos card - sits beside hero on lg */}
+        <div className={`${card} flex min-h-[140px] flex-col justify-between p-5`}>
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0 flex-1">
+              <div className={cardHeader}>{otherCards[0].header}</div>
+              <div className={`${cardValue} mt-2`}>{otherCards[0].value}</div>
+            </div>
+            <CheckSquare className="size-5 shrink-0 text-[var(--text-muted)]" />
+          </div>
+          <div className="mt-5">
+            <Link href={otherCards[0].href} className={btnSecondary + " inline-flex gap-2"}>
+              {otherCards[0].label}
+            </Link>
+          </div>
+        </div>
+
+        {/* Row 2: Goals, Issues, Scorecard */}
+        {otherCards.slice(1, 4).map((c) => {
           const Icon = c.icon;
           return (
-            <div key={c.href} className={card + " p-5"}>
+            <div key={c.href} className={`${card} flex min-h-[140px] flex-col justify-between p-5`}>
               <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0 flex-1">
                   <div className={cardHeader}>{c.header}</div>
@@ -107,11 +158,7 @@ export default function HomePage() {
                 <Icon className="size-5 shrink-0 text-[var(--text-muted)]" />
               </div>
               <div className="mt-5">
-                <Link
-                  href={c.href}
-                  className={c.primary ? btnPrimary + " inline-flex gap-2" : btnSecondary + " inline-flex gap-2"}
-                >
-                  {c.primary && <Play className="size-4" />}
+                <Link href={c.href} className={btnSecondary + " inline-flex gap-2"}>
                   {c.label}
                 </Link>
               </div>

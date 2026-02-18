@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Clock, Calendar, Play, ListTodo } from "lucide-react";
+import { Clock, Calendar, Play, ListTodo, Plus, Pencil } from "lucide-react";
 import { useMockDb } from "@/lib/mock/MockDbProvider";
 import { PageTitle, card, btnPrimary, btnSecondary } from "@/components/ui";
 
@@ -28,8 +28,9 @@ function totalMinutes(sections: { durationMinutes: number }[]) {
 }
 
 export default function AgendasPage() {
-  const { db } = useMockDb();
+  const { db, hasPermission } = useMockDb();
   const templates = db.meetingTemplates;
+  const canEdit = hasPermission("manage_team");
 
   return (
     <div className="space-y-8">
@@ -38,9 +39,17 @@ export default function AgendasPage() {
           title="Agendas"
           subtitle="Templates for your meetings. Each section has a suggested time so you stay on track."
         />
-        <Link href="/meetings" className={btnSecondary}>
-          Back to Meetings
-        </Link>
+        <div className="flex flex-wrap items-center gap-2">
+          {canEdit && (
+            <Link href="/meetings/agendas/new" className={btnPrimary + " inline-flex gap-2"}>
+              <Plus className="size-4" />
+              Create template
+            </Link>
+          )}
+          <Link href="/meetings" className={btnSecondary}>
+            Back to Meetings
+          </Link>
+        </div>
       </div>
 
       <div className="space-y-5">
@@ -53,12 +62,19 @@ export default function AgendasPage() {
               No agendas yet
             </p>
             <p className="mt-1 text-[14px] text-[var(--text-muted)]">
-              Add templates in settings or seed starter data.
+              {canEdit ? "Create a template to get started." : "Add templates in settings or seed starter data."}
             </p>
-            <Link href="/meetings/run" className={btnPrimary + " mt-6 inline-flex"}>
+            {canEdit ? (
+              <Link href="/meetings/agendas/new" className={btnPrimary + " mt-6 inline-flex gap-2"}>
+                <Plus className="size-4" />
+                Create template
+              </Link>
+            ) : (
+              <Link href="/meetings/run" className={btnPrimary + " mt-6 inline-flex gap-2"}>
               <Play className="size-4" />
-              Run meeting
-            </Link>
+                Run meeting
+              </Link>
+            )}
           </div>
         ) : (
           templates.map((t) => {
@@ -73,9 +89,20 @@ export default function AgendasPage() {
                         {t.title}
                       </h2>
                     </div>
-                    <span className="rounded-md bg-[var(--muted-bg)] px-2.5 py-1 text-[12px] font-medium text-[var(--text-secondary)]">
-                      {total} min total
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="rounded-md bg-[var(--muted-bg)] px-2.5 py-1 text-[12px] font-medium text-[var(--text-secondary)]">
+                        {total} min total
+                      </span>
+                      {canEdit && (
+                        <Link
+                          href={`/meetings/agendas/${t.id}/edit`}
+                          className={btnSecondary + " inline-flex gap-1.5 text-[13px]"}
+                        >
+                          <Pencil className="size-3.5" />
+                          Edit
+                        </Link>
+                      )}
+                    </div>
                   </div>
                 </div>
                 <ul className="divide-y divide-[var(--border)]">

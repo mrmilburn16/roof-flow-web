@@ -15,9 +15,9 @@ const btnSecondary =
 const goalStatusButtonBase =
   "inline-flex items-center justify-center gap-2 rounded-[var(--radius)] border px-4 py-2.5 text-[13px] font-medium transition active:scale-[0.98]";
 const goalStatusActive = {
-  onTrack: "border-[var(--badge-success-text)] bg-[var(--badge-success-bg)] text-[var(--badge-success-text)]",
-  offTrack: "border-[var(--badge-warning-text)] bg-[var(--badge-warning-bg)] text-[var(--badge-warning-text)]",
-  done: "border-[var(--badge-neutral-text)] bg-[var(--badge-neutral-bg)] text-[var(--badge-neutral-text)]",
+  onTrack: "border-[var(--badge-success-text)] bg-[var(--goal-btn-on-bg)] text-[var(--badge-success-text)]",
+  offTrack: "border-[var(--badge-warning-text)] bg-[var(--goal-btn-off-bg)] text-[var(--badge-warning-text)]",
+  done: "border-[var(--badge-neutral-text)] bg-[var(--goal-btn-done-bg)] text-[var(--badge-neutral-text)]",
 } as const;
 
 const inputBase =

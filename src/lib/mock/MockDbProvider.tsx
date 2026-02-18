@@ -2,10 +2,11 @@
 
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
 import type { GoalStatus, MeetingSectionKind, PermissionCode } from "@/lib/domain";
-import type { MockDb, MeetingRunStatus } from "@/lib/mock/mockData";
+import type { MeetingSection, MeetingTemplate } from "@/lib/domain";
+import type { MockDb, MeetingRunStatus, Vision } from "@/lib/mock/mockData";
 import { createInitialMockDb, startOfWeek } from "@/lib/mock/mockData";
 import { isFirebaseConfigured, getFirebaseDb } from "@/lib/firebase/client";
-import { collection, doc, onSnapshot, setDoc, updateDoc } from "firebase/firestore";
+import { collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc } from "firebase/firestore";
 import { useAuth } from "@/lib/auth/AuthProvider";
 
 type MockDbApi = {
@@ -19,6 +20,7 @@ type MockDbApi = {
   getMeetingRunStatus(weekOf: string): MeetingRunStatus;
   setMeetingRunStatus(weekOf: string, status: MeetingRunStatus): void;
   setRolePermissions(roleId: string, permissionIds: PermissionCode[]): void;
+  setRoleParent(roleId: string, parentRoleId: string | null): void;
 
   createTodo(title: string): void;
   toggleTodo(todoId: string): void;
@@ -33,8 +35,20 @@ type MockDbApi = {
   upsertKpiEntry(kpiId: string, weekOf: string, value: number): void;
 
   setMeetingNotes(notes: string): void;
-  getMeetingTemplate(): MockDb["meetingTemplates"][number] | undefined;
+  setMeetingFeedback(weekOf: string, rating: number, comment?: string): void;
+  getMeetingRatingsAverage(): number | null;
+  getVision(): Vision;
+  setVision(vision: Vision): void;
+  getMeetingTemplate(templateId?: string): MockDb["meetingTemplates"][number] | undefined;
   meetingSectionOrder(): MeetingSectionKind[];
+
+  createUser(payload: { name: string; roleId: string; initials?: string }): void;
+  updateUser(userId: string, payload: { name?: string; roleId?: string; initials?: string }): void;
+  deleteUser(userId: string): void;
+
+  createMeetingTemplate(payload: { title: string; sections: MeetingSection[] }): void;
+  updateMeetingTemplate(templateId: string, payload: { title?: string; sections?: MeetingSection[] }): void;
+  deleteMeetingTemplate(templateId: string): void;
 };
 
 const Ctx = createContext<MockDbApi | null>(null);
@@ -111,15 +125,30 @@ export function MockDbProvider({ children }: { children: React.ReactNode }) {
       }),
     );
 
+    const meetingRunsRef = collection(firestore, "companies", companyId, "teams", teamId, "meetingRuns");
     unsubs.push(
-      onSnapshot(doc(firestore, "companies", companyId, "teams", teamId, "meetingRuns", weekOf), (snap) => {
-        const data = snap.data();
-        const notes = (data?.notes as string | undefined) ?? "";
-        const status = (data?.status as MeetingRunStatus | undefined) ?? "scheduled";
+      onSnapshot(meetingRunsRef, (snap) => {
+        const statusMap: Record<string, MeetingRunStatus> = {};
+        const feedbackMap: Record<string, { rating: number; comment?: string }> = {};
+        let notesForCurrentWeek = "";
+        snap.docs.forEach((d) => {
+          const data = d.data();
+          const weekKey = d.id;
+          const status = (data?.status as MeetingRunStatus | undefined) ?? "scheduled";
+          statusMap[weekKey] = status;
+          const rating = data?.rating as number | undefined;
+          if (rating != null && Number.isFinite(rating)) {
+            feedbackMap[weekKey] = { rating, comment: data?.comment as string | undefined };
+          }
+          if (weekKey === weekOf) {
+            notesForCurrentWeek = (data?.notes as string | undefined) ?? "";
+          }
+        });
         setDb((prev) => ({
           ...prev,
-          meetingNotes: notes,
-          meetingRunStatus: { ...prev.meetingRunStatus, [weekOf]: status },
+          meetingNotes: notesForCurrentWeek,
+          meetingRunStatus: statusMap,
+          meetingFeedback: feedbackMap,
         }));
       }),
     );
@@ -135,6 +164,19 @@ export function MockDbProvider({ children }: { children: React.ReactNode }) {
       onSnapshot(base("users"), (snap) => {
         const users = snap.docs.map((d) => ({ id: d.id, ...d.data() })) as MockDb["users"];
         setDb((prev) => ({ ...prev, users }));
+      }),
+    );
+
+    const visionRef = doc(firestore, "companies", companyId, "teams", teamId, "vision", "default");
+    unsubs.push(
+      onSnapshot(visionRef, (snap) => {
+        const data = snap.data();
+        const vision: Vision = {
+          purpose: (data?.purpose as string) ?? "",
+          coreValues: Array.isArray(data?.coreValues) ? data.coreValues : [],
+          focus: (data?.focus as string) ?? "",
+        };
+        setDb((prev) => ({ ...prev, vision }));
       }),
     );
 
@@ -199,6 +241,19 @@ export function MockDbProvider({ children }: { children: React.ReactNode }) {
         if (firestore) {
           const ref = docRef("roles", roleId);
           if (ref) void updateDoc(ref, { permissionIds });
+        }
+      },
+
+      setRoleParent(roleId, parentRoleId) {
+        setDb((prev) => ({
+          ...prev,
+          roles: prev.roles.map((r) =>
+            r.id === roleId ? { ...r, parentRoleId } : r,
+          ),
+        }));
+        if (firestore) {
+          const ref = docRef("roles", roleId);
+          if (ref) void updateDoc(ref, { parentRoleId });
         }
       },
 
@@ -412,13 +467,166 @@ export function MockDbProvider({ children }: { children: React.ReactNode }) {
         setDb((prev) => ({ ...prev, meetingNotes: notes }));
       },
 
-      getMeetingTemplate() {
+      setMeetingFeedback(weekOfKey, ratingValue, commentText) {
+        setDb((prev) => ({
+          ...prev,
+          meetingFeedback: {
+            ...prev.meetingFeedback,
+            [weekOfKey]: { rating: ratingValue, comment: commentText },
+          },
+        }));
+        if (firestore) {
+          const ref = doc(
+            firestore,
+            "companies",
+            companyId,
+            "teams",
+            teamId,
+            "meetingRuns",
+            weekOfKey,
+          );
+          void setDoc(ref, { rating: ratingValue, comment: commentText ?? null }, { merge: true });
+        }
+      },
+
+      getMeetingRatingsAverage() {
+        const entries = Object.values(db.meetingFeedback ?? {});
+        if (entries.length === 0) return null;
+        const sum = entries.reduce((a, e) => a + e.rating, 0);
+        return Math.round((sum / entries.length) * 10) / 10;
+      },
+
+      getVision() {
+        return db.vision ?? { purpose: "", coreValues: [], focus: "" };
+      },
+
+      setVision(visionPayload) {
+        setDb((prev) => ({ ...prev, vision: visionPayload }));
+        if (firestore) {
+          const ref = doc(firestore, "companies", companyId, "teams", teamId, "vision", "default");
+          void setDoc(ref, visionPayload, { merge: true });
+        }
+      },
+
+      getMeetingTemplate(templateId?: string) {
+        if (templateId) return db.meetingTemplates.find((t) => t.id === templateId);
         return db.meetingTemplates[0];
       },
 
       meetingSectionOrder() {
         const t = db.meetingTemplates[0];
         return t ? t.sections.map((s) => s.kind) : [];
+      },
+
+      createUser(payload) {
+        const name = payload.name.trim();
+        const initials =
+          payload.initials?.trim().slice(0, 4) ||
+          name
+            .split(/\s+/)
+            .map((w) => w[0])
+            .join("")
+            .toUpperCase()
+            .slice(0, 4) ||
+          "??";
+        const id = `u_${crypto.randomUUID().slice(0, 8)}`;
+        const user = { id, name, initials, roleId: payload.roleId };
+        if (firestore) {
+          const ref = docRef("users", id);
+          if (ref) {
+            void setDoc(ref, { name, initials, roleId: payload.roleId });
+            return;
+          }
+        }
+        setDb((prev) => ({ ...prev, users: [...prev.users, user] }));
+      },
+
+      updateUser(userId, payload) {
+        const existing = db.users.find((u) => u.id === userId);
+        if (!existing) return;
+        const next = {
+          ...existing,
+          ...(payload.name !== undefined && { name: payload.name.trim() }),
+          ...(payload.roleId !== undefined && { roleId: payload.roleId }),
+          ...(payload.initials !== undefined && { initials: payload.initials.trim().slice(0, 4) }),
+        };
+        setDb((prev) => ({
+          ...prev,
+          users: prev.users.map((u) => (u.id === userId ? next : u)),
+        }));
+        if (firestore) {
+          const ref = docRef("users", userId);
+          if (ref) {
+            const updates: Record<string, string> = {};
+            if (payload.name !== undefined) updates.name = next.name;
+            if (payload.roleId !== undefined) updates.roleId = next.roleId;
+            if (payload.initials !== undefined) updates.initials = next.initials;
+            if (Object.keys(updates).length) void updateDoc(ref, updates);
+            return;
+          }
+        }
+      },
+
+      deleteUser(userId) {
+        setDb((prev) => ({ ...prev, users: prev.users.filter((u) => u.id !== userId) }));
+        if (firestore) {
+          const ref = docRef("users", userId);
+          if (ref) void deleteDoc(ref);
+        }
+      },
+
+      createMeetingTemplate(payload) {
+        const id = `mt_${crypto.randomUUID().slice(0, 8)}`;
+        const template: MeetingTemplate = {
+          id,
+          title: payload.title.trim(),
+          sections: payload.sections.map((s) => ({ ...s, id: s.id || `ms_${crypto.randomUUID().slice(0, 6)}` })),
+          createdAt: new Date().toISOString(),
+        };
+        if (firestore) {
+          const ref = docRef("meetingTemplates", id);
+          if (ref) {
+            void setDoc(ref, { title: template.title, sections: template.sections, createdAt: template.createdAt });
+            return;
+          }
+        }
+        setDb((prev) => ({ ...prev, meetingTemplates: [...prev.meetingTemplates, template] }));
+      },
+
+      updateMeetingTemplate(templateId, payload) {
+        const existing = db.meetingTemplates.find((t) => t.id === templateId);
+        if (!existing) return;
+        const next: MeetingTemplate = {
+          ...existing,
+          ...(payload.title !== undefined && { title: payload.title.trim() }),
+          ...(payload.sections !== undefined && {
+            sections: payload.sections.map((s) => ({ ...s, id: s.id || `ms_${crypto.randomUUID().slice(0, 6)}` })),
+          }),
+        };
+        setDb((prev) => ({
+          ...prev,
+          meetingTemplates: prev.meetingTemplates.map((t) => (t.id === templateId ? next : t)),
+        }));
+        if (firestore) {
+          const ref = docRef("meetingTemplates", templateId);
+          if (ref) {
+            const updates: Record<string, unknown> = {};
+            if (payload.title !== undefined) updates.title = next.title;
+            if (payload.sections !== undefined) updates.sections = next.sections;
+            if (Object.keys(updates).length) void updateDoc(ref, updates);
+          }
+        }
+      },
+
+      deleteMeetingTemplate(templateId) {
+        setDb((prev) => ({
+          ...prev,
+          meetingTemplates: prev.meetingTemplates.filter((t) => t.id !== templateId),
+        }));
+        if (firestore) {
+          const ref = docRef("meetingTemplates", templateId);
+          if (ref) void deleteDoc(ref);
+        }
       },
     };
   }, [companyId, db, firestore, meFromAuth, teamId, weekOf]);

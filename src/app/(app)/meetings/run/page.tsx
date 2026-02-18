@@ -1,10 +1,10 @@
 "use client";
 
-import { useMemo, useState, useCallback } from "react";
+import { useMemo, useState, useCallback, useEffect } from "react";
 import type { MeetingSectionKind } from "@/lib/domain";
 import { Plus, Copy, Check, Square } from "lucide-react";
 import { useMockDb } from "@/lib/mock/MockDbProvider";
-import { PageTitle, card, inputBase, btnSecondary, goalStatusButtonBase, goalStatusActive, StatusBadge } from "@/components/ui";
+import { PageTitle, card, inputBase, btnPrimary, btnSecondary, goalStatusButtonBase, goalStatusActive, StatusBadge } from "@/components/ui";
 
 function formatWeek(weekOf: string) {
   const d = new Date(weekOf + "T12:00:00");
@@ -56,11 +56,13 @@ export default function MeetingRunPage() {
     setGoalStatus,
     upsertKpiEntry,
     setMeetingNotes,
+    setMeetingFeedback,
   } = useMockDb();
   const meetingNotes = db.meetingNotes;
+  const existingFeedback = db.meetingFeedback?.[weekOf];
 
   const template = db.meetingTemplates[0];
-  const order = template?.sections.map((s) => s.kind) ?? [];
+  const order = template?.sections?.map((s) => s.kind) ?? [];
   const sectionDurations = useMemo(() => {
     const map = new Map<MeetingSectionKind, number>();
     for (const s of template?.sections ?? []) map.set(s.kind, s.durationMinutes);
@@ -70,6 +72,8 @@ export default function MeetingRunPage() {
   const [kpiDrafts, setKpiDrafts] = useState<Record<string, string>>({});
   const [showRecap, setShowRecap] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [recapRating, setRecapRating] = useState<number | "">(existingFeedback?.rating ?? "");
+  const [recapComment, setRecapComment] = useState(existingFeedback?.comment ?? "");
 
   const openTodos = useMemo(
     () => db.todos.filter((t) => t.status === "open"),
@@ -131,6 +135,21 @@ export default function MeetingRunPage() {
       setCopied(false);
     }
   }, [recapText]);
+
+  useEffect(() => {
+    if (showRecap) {
+      setRecapRating(existingFeedback?.rating ?? "");
+      setRecapComment(existingFeedback?.comment ?? "");
+    }
+  }, [showRecap, existingFeedback?.rating, existingFeedback?.comment]);
+
+  const handleRecapDone = useCallback(() => {
+    const r = typeof recapRating === "number" ? recapRating : Number(recapRating);
+    if (Number.isFinite(r) && r >= 1 && r <= 10) {
+      setMeetingFeedback(weekOf, Math.round(r), recapComment.trim() || undefined);
+    }
+    setShowRecap(false);
+  }, [recapRating, recapComment, weekOf, setMeetingFeedback]);
 
   return (
     <div className="space-y-6">
@@ -494,31 +513,61 @@ export default function MeetingRunPage() {
                 {recapText || "No notes or to-dos yet."}
               </pre>
             </div>
-            <div className="flex gap-2 border-t border-[var(--border)] px-5 py-4">
-              <button
-                type="button"
-                onClick={handleCopyRecap}
-                className={btnSecondary + " flex items-center gap-2"}
-              >
-                {copied ? (
-                  <>
-                    <Check className="size-4" />
-                    Copied
-                  </>
-                ) : (
-                  <>
-                    <Copy className="size-4" />
-                    Copy to clipboard
-                  </>
-                )}
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowRecap(false)}
-                className={btnPrimary}
-              >
-                Done
-              </button>
+            <div className="border-t border-[var(--border)] px-5 py-4 space-y-4">
+              <div>
+                <label htmlFor="recap-rating" className="block text-[13px] font-medium text-[var(--text-primary)]">
+                  Rate this meeting (1–10)
+                </label>
+                <div className="mt-1.5 flex flex-wrap items-center gap-3">
+                  <input
+                    id="recap-rating"
+                    type="number"
+                    min={1}
+                    max={10}
+                    step={1}
+                    value={recapRating === "" ? "" : recapRating}
+                    onChange={(e) => {
+                      const v = e.target.value === "" ? "" : Number(e.target.value);
+                      setRecapRating(v);
+                    }}
+                    className={`${inputBase} w-20`}
+                    placeholder="—"
+                  />
+                  <input
+                    type="text"
+                    value={recapComment}
+                    onChange={(e) => setRecapComment(e.target.value)}
+                    placeholder="Optional comment"
+                    className={`${inputBase} min-w-[180px] flex-1`}
+                  />
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={handleCopyRecap}
+                  className={btnSecondary + " flex items-center gap-2"}
+                >
+                  {copied ? (
+                    <>
+                      <Check className="size-4" />
+                      Copied
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="size-4" />
+                      Copy to clipboard
+                    </>
+                  )}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleRecapDone}
+                  className={btnPrimary}
+                >
+                  Done
+                </button>
+              </div>
             </div>
           </div>
         </div>

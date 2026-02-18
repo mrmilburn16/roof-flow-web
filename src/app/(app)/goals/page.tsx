@@ -5,7 +5,7 @@ import { useMemo, useState } from "react";
 import { Plus, Target, Play, Calendar } from "lucide-react";
 import type { GoalStatus } from "@/lib/domain";
 import { useMockDb } from "@/lib/mock/MockDbProvider";
-import { PageTitle, card, inputBase, btnSecondary, goalStatusButtonBase, goalStatusActive, StatusBadge } from "@/components/ui";
+import { PageTitle, card, inputBase, btnPrimary, btnSecondary, goalStatusButtonBase, goalStatusActive, StatusBadge } from "@/components/ui";
 
 const STATUSES: GoalStatus[] = ["onTrack", "offTrack", "done"];
 
