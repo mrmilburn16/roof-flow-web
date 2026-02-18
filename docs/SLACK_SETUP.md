@@ -66,12 +66,32 @@ NEXT_PUBLIC_APP_URL=https://your-domain.com
 
 ## 3. Firebase Admin (for creating to-dos from Slack)
 
-The `/api/slack/events` route writes new to-dos to Firestore. It uses the Firebase Admin SDK and needs server credentials:
+The `/api/slack/events` route writes new to-dos to Firestore. It uses the Firebase Admin SDK and needs server credentials.
 
-- **Option A:** Set `GOOGLE_APPLICATION_CREDENTIALS` to the path to a service account key JSON file (e.g. from Firebase Console → Project settings → Service accounts).
-- **Option B:** On Vercel (or similar), set the env vars that your host uses for Google default credentials.
+### Full list of env vars for Vercel
 
-Ensure the service account can read/write the Firestore collections used by the app (`companies/{companyId}/teams/{teamId}/todos` and `.../config/slack`).
+| Variable | Where to get it | Required for |
+|----------|-----------------|--------------|
+| **Slack** | | |
+| `SLACK_CLIENT_ID` | Slack app → Basic Information → App Credentials | OAuth, channels |
+| `SLACK_CLIENT_SECRET` | Same | OAuth |
+| `SLACK_SIGNING_SECRET` | Same → Signing Secret | Events API |
+| **App URL** | | |
+| `NEXT_PUBLIC_APP_URL` | Your Vercel domain, e.g. `https://roof-flow-web.vercel.app` | OAuth redirect |
+| **Firebase Admin (server)** | | |
+| `NEXT_PUBLIC_FIREBASE_PROJECT_ID` | Firebase Console → Project settings → General | Firestore + Admin |
+| `FIREBASE_SERVICE_ACCOUNT_JSON` | Firebase Console → Project settings → Service accounts → Generate new private key → paste the **entire** JSON as the value (single line or escaped) | Firestore on Vercel |
+| **Firebase client (if using Firestore + auth in the app)** | | |
+| `NEXT_PUBLIC_FIREBASE_API_KEY` | Firebase Console → Project settings → General → Your apps | Client SDK |
+| `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN` | Same, e.g. `your-project.firebaseapp.com` | Client SDK |
+| `NEXT_PUBLIC_FIREBASE_PROJECT_ID` | Same as above | Client SDK |
+| `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET` | Same, e.g. `your-project.appspot.com` | Client SDK |
+| `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID` | Same | Client SDK |
+| `NEXT_PUBLIC_FIREBASE_APP_ID` | Same | Client SDK |
+| `NEXT_PUBLIC_USE_FIRESTORE` | Set to `true` so the app reads/writes Firestore (todos, etc.) | Client data |
+| `NEXT_PUBLIC_USE_FIREBASE_AUTH` | Set to `true` if you use Firebase Auth | Optional |
+
+**Vercel note:** For `FIREBASE_SERVICE_ACCOUNT_JSON`, paste the whole service account JSON. You can minify it to one line (no newlines) or escape newlines. Do not strip any fields (`private_key_id`, `private_key`, `client_email`, etc.) — use the file exactly as downloaded.
 
 ## 4. Slack → to-do flow (what’s wired)
 

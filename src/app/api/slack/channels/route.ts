@@ -1,27 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAdminDb } from "@/lib/firebase/admin";
-
-const COMPANY_ID = process.env.NEXT_PUBLIC_COMPANY_ID || "c_roofco";
-const TEAM_ID = process.env.NEXT_PUBLIC_TEAM_ID || "t_leadership";
-
-async function getSlackToken(): Promise<string | null> {
-  const db = getAdminDb();
-  if (!db) return null;
-  const snap = await db
-    .collection("companies")
-    .doc(COMPANY_ID)
-    .collection("teams")
-    .doc(TEAM_ID)
-    .collection("config")
-    .doc("slack")
-    .get();
-  const data = snap.data();
-  return (data?.accessToken as string) ?? null;
-}
+import { getSlackConfig } from "@/lib/slack/config";
 
 /** GET: list public channels the app can see */
 export async function GET() {
-  const token = await getSlackToken();
+  const config = await getSlackConfig();
+  const token = config?.accessToken ?? null;
   if (!token) {
     return NextResponse.json({ error: "Slack not connected" }, { status: 401 });
   }
@@ -38,7 +21,8 @@ export async function GET() {
 
 /** POST: create a new public channel */
 export async function POST(request: NextRequest) {
-  const token = await getSlackToken();
+  const config = await getSlackConfig();
+  const token = config?.accessToken ?? null;
   if (!token) {
     return NextResponse.json({ error: "Slack not connected" }, { status: 401 });
   }

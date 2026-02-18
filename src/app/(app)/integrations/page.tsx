@@ -46,6 +46,29 @@ function IntegrationLogo({
 type SlackStatus = { connected: boolean; channelId: string | null; channelName: string | null };
 type SlackChannel = { id: string; name: string; isMember?: boolean };
 
+const SLACK_STATUS_CACHE_KEY = "roofflow_slack_status";
+
+function getCachedSlackStatus(): SlackStatus | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const s = sessionStorage.getItem(SLACK_STATUS_CACHE_KEY);
+    if (!s) return null;
+    const p = JSON.parse(s) as SlackStatus;
+    return p && typeof p.connected === "boolean" ? p : null;
+  } catch {
+    return null;
+  }
+}
+
+function setCachedSlackStatus(status: SlackStatus): void {
+  if (typeof window === "undefined") return;
+  try {
+    sessionStorage.setItem(SLACK_STATUS_CACHE_KEY, JSON.stringify(status));
+  } catch {
+    /* ignore */
+  }
+}
+
 const ROADMAP = [
   {
     id: "acculynx",
@@ -72,7 +95,7 @@ const ROADMAP = [
 
 function IntegrationsContent() {
   const searchParams = useSearchParams();
-  const [slackStatus, setSlackStatus] = useState<SlackStatus | null>(null);
+  const [slackStatus, setSlackStatus] = useState<SlackStatus | null>(() => getCachedSlackStatus());
   const [slackChannels, setSlackChannels] = useState<SlackChannel[] | null>(null);
   const [slackLoading, setSlackLoading] = useState(true);
   const [channelLoading, setChannelLoading] = useState(false);
@@ -82,6 +105,8 @@ function IntegrationsContent() {
   const [message, setMessage] = useState<"connected" | "error" | null>(null);
   const [playConnectedAnimation, setPlayConnectedAnimation] = useState(false);
   const connectedAnimatedRef = useRef(false);
+  const slackSectionRef = useRef<HTMLElement>(null);
+  const didScrollToSlackRef = useRef(false);
 
   useEffect(() => {
     const q = searchParams.get("slack");
@@ -97,6 +122,7 @@ function IntegrationsContent() {
         if (cancelled) return;
         const data = (await res.json()) as SlackStatus;
         setSlackStatus(data);
+        setCachedSlackStatus(data);
         if (data.connected) {
           setChannelLoading(true);
           const chRes = await fetch("/api/slack/channels");
@@ -105,7 +131,11 @@ function IntegrationsContent() {
           setSlackChannels(chData.channels ?? []);
         }
       } catch {
-        if (!cancelled) setSlackStatus({ connected: false, channelId: null, channelName: null });
+        if (!cancelled) {
+          const fallback = { connected: false, channelId: null, channelName: null };
+          setSlackStatus(fallback);
+          setCachedSlackStatus(fallback);
+        }
       } finally {
         if (!cancelled) setSlackLoading(false); setChannelLoading(false);
       }
@@ -131,6 +161,17 @@ function IntegrationsContent() {
     }, 700);
     return () => clearTimeout(t);
   }, [showAsConnected, message]);
+
+  useEffect(() => {
+    if (message !== "connected" || didScrollToSlackRef.current) return;
+    didScrollToSlackRef.current = true;
+    const el = slackSectionRef.current;
+    if (!el) return;
+    const t = setTimeout(() => {
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 100);
+    return () => clearTimeout(t);
+  }, [message]);
 
   const selectChannel = async (channelId: string, channelName: string) => {
     setSetChannelLoadingId(channelId);
@@ -207,7 +248,7 @@ function IntegrationsContent() {
       />
 
       {/* Slack */}
-      <section className="space-y-4">
+      <section ref={slackSectionRef} className="space-y-4" aria-label="Slack integration">
         <div className="flex items-center gap-2">
           <span className="flex size-8 items-center justify-center rounded-full bg-[var(--badge-info-bg)] text-[12px] font-bold text-[var(--badge-info-text)]">
             1
@@ -252,11 +293,16 @@ function IntegrationsContent() {
               {message === "connected" && !slackStatus?.connected && !slackLoading && (
                 <p className="mt-2 text-[13px] text-[var(--text-muted)]">If channels don’t load, the connection may not have been saved. <button type="button" onClick={connectSlack} className="font-medium text-[var(--badge-info-text)] underline hover:no-underline">Reconnect</button></p>
               )}
-              {!slackLoading && !showAsConnected && (
-                <button type="button" onClick={connectSlack} className={btnPrimary + " mt-4 inline-flex gap-2"}>
-                  <MessageCircle className="size-4" />
-                  Connect to Slack
-                </button>
+              {!showAsConnected && (
+                <div className="mt-4 flex flex-wrap items-center gap-2">
+                  <button type="button" onClick={connectSlack} className={btnPrimary + " inline-flex gap-2"}>
+                    <MessageCircle className="size-4" />
+                    Connect to Slack
+                  </button>
+                  {slackLoading && (
+                    <span className="text-[13px] text-[var(--text-muted)]">Checking connection…</span>
+                  )}
+                </div>
               )}
               {showAsConnected && (
                 <div className="mt-6">

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminDb } from "@/lib/firebase/admin";
+import { setSlackConfigMemory } from "@/lib/slack/config";
 
 const SLACK_CLIENT_ID = process.env.SLACK_CLIENT_ID;
 const SLACK_CLIENT_SECRET = process.env.SLACK_CLIENT_SECRET;
@@ -69,9 +70,18 @@ export async function GET(request: NextRequest) {
         accessToken: data.access_token,
         updatedAt: new Date().toISOString(),
       });
+    } else {
+      setSlackConfigMemory({
+        accessToken: data.access_token,
+        slackTeamId: data.team?.id ?? "",
+      });
     }
   } catch (err) {
     console.error("Slack callback: failed to store token", err);
+    setSlackConfigMemory({
+      accessToken: data.access_token,
+      slackTeamId: data.team?.id ?? "",
+    });
     return NextResponse.redirect(`${appUrl}/integrations?slack=connected&storage=failed`);
   }
 
