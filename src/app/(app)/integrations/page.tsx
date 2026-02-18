@@ -230,7 +230,19 @@ function IntegrationsContent() {
               <IntegrationLogo logoUrl={LOGOS.slack} fallbackIcon={MessageCircle} sizeClass="size-8" />
             </div>
             <div className="min-w-0 flex-1">
-              <h3 className="text-[18px] font-semibold text-[var(--text-primary)]">Slack</h3>
+              <div className="flex flex-wrap items-center gap-2">
+                <h3 className="text-[18px] font-semibold text-[var(--text-primary)]">Slack</h3>
+                {showAsConnected && (
+                  <span
+                    className={`inline-flex items-center gap-1 rounded-full bg-[var(--badge-success-bg)] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-[var(--badge-success-text)] ${playConnectedAnimation ? "slack-connected-celebrate" : ""}`}
+                    aria-live="polite"
+                    aria-label="Slack connected"
+                  >
+                    <Check className="size-3.5" strokeWidth={2.5} aria-hidden />
+                    Connected
+                  </span>
+                )}
+              </div>
               <p className="mt-2 text-[14px] leading-relaxed text-[var(--helper-text)]">
                 Post in a channel to create to-dos. We show who added each item and link back to the message.
               </p>
@@ -245,16 +257,6 @@ function IntegrationsContent() {
                   <MessageCircle className="size-4" />
                   Connect to Slack
                 </button>
-              )}
-              {!slackLoading && showAsConnected && (
-                <div
-                  className={`mt-4 inline-flex cursor-default items-center gap-2 rounded-[var(--radius)] bg-emerald-500 px-4 py-2.5 font-semibold text-white shadow-sm ${playConnectedAnimation ? "slack-connected-celebrate" : ""}`}
-                  aria-live="polite"
-                  aria-label="Slack connected"
-                >
-                  <Check className="size-4" strokeWidth={2.5} aria-hidden />
-                  Connected
-                </div>
               )}
               {showAsConnected && (
                 <div className="mt-6">
