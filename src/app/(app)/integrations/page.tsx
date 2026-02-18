@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
-import { MessageCircle, Building2, LayoutGrid, Cloud, Plug2 } from "lucide-react";
-import { PageTitle } from "@/components/ui";
+import { Suspense, useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
+import { MessageCircle, Building2, LayoutGrid, Cloud, Plug2, Plus, Check } from "lucide-react";
+import { PageTitle, btnPrimary, btnSecondary, inputBase } from "@/components/ui";
 
 /** Slack from World Vector Logo; Acculynx, Buildertrend, Microsoft 365 icons disabled for now */
 const LOGOS = {
@@ -42,14 +43,8 @@ function IntegrationLogo({
   );
 }
 
-const IN_DEV = {
-  id: "slack",
-  name: "Slack",
-  description: "Get meeting recaps, to-dos, and scorecard updates in your channels. We're building it.",
-  logoUrl: LOGOS.slack,
-  icon: MessageCircle,
-  status: "in_development" as const,
-};
+type SlackStatus = { connected: boolean; channelId: string | null; channelName: string | null };
+type SlackChannel = { id: string; name: string; isMember?: boolean };
 
 const ROADMAP = [
   {
@@ -75,7 +70,88 @@ const ROADMAP = [
   },
 ] as const;
 
-export default function IntegrationsPage() {
+function IntegrationsContent() {
+  const searchParams = useSearchParams();
+  const [slackStatus, setSlackStatus] = useState<SlackStatus | null>(null);
+  const [slackChannels, setSlackChannels] = useState<SlackChannel[] | null>(null);
+  const [slackLoading, setSlackLoading] = useState(true);
+  const [channelLoading, setChannelLoading] = useState(false);
+  const [newChannelName, setNewChannelName] = useState("");
+  const [creatingChannel, setCreatingChannel] = useState(false);
+  const [setChannelLoadingId, setSetChannelLoadingId] = useState<string | null>(null);
+  const [message, setMessage] = useState<"connected" | "error" | null>(null);
+
+  useEffect(() => {
+    const q = searchParams.get("slack");
+    if (q === "connected") setMessage("connected");
+    if (q === "error") setMessage("error");
+  }, [searchParams]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/slack/status");
+        if (cancelled) return;
+        const data = (await res.json()) as SlackStatus;
+        setSlackStatus(data);
+        if (data.connected) {
+          setChannelLoading(true);
+          const chRes = await fetch("/api/slack/channels");
+          if (cancelled) return;
+          const chData = (await chRes.json()) as { channels?: SlackChannel[] };
+          setSlackChannels(chData.channels ?? []);
+        }
+      } catch {
+        if (!cancelled) setSlackStatus({ connected: false, channelId: null, channelName: null });
+      } finally {
+        if (!cancelled) setSlackLoading(false); setChannelLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [searchParams.get("slack")]);
+
+  const connectSlack = () => {
+    window.location.href = "/api/slack/oauth";
+  };
+
+  const selectChannel = async (channelId: string, channelName: string) => {
+    setSetChannelLoadingId(channelId);
+    try {
+      const res = await fetch("/api/slack/set-channel", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ channelId, channelName }),
+      });
+      if (res.ok && slackStatus) setSlackStatus({ ...slackStatus, channelId, channelName });
+    } finally {
+      setSetChannelLoadingId(null);
+    }
+  };
+
+  const createChannel = async () => {
+    const name = newChannelName.trim().toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9_-]/g, "");
+    if (!name || name.length < 2) return;
+    setCreatingChannel(true);
+    try {
+      const res = await fetch("/api/slack/channels", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name }),
+      });
+      const data = (await res.json()) as { channel?: { id: string; name: string }; error?: string };
+      if (data.channel) {
+        setSlackChannels((prev) => (prev ?? []).concat([{ id: data.channel!.id, name: data.channel!.name }]));
+        await selectChannel(data.channel.id, data.channel.name);
+        setNewChannelName("");
+      } else if (data.error) {
+        alert(data.error);
+      }
+    } finally {
+      setCreatingChannel(false);
+    }
+  };
+
   return (
     <div className="space-y-12">
       {/* Hero */}
@@ -113,14 +189,14 @@ export default function IntegrationsPage() {
         subtitle="What we're building and what's next. No ETA spam — just the order we're tackling."
       />
 
-      {/* In development */}
+      {/* Slack */}
       <section className="space-y-4">
         <div className="flex items-center gap-2">
           <span className="flex size-8 items-center justify-center rounded-full bg-[var(--badge-info-bg)] text-[12px] font-bold text-[var(--badge-info-text)]">
             1
           </span>
           <h2 className="text-[13px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
-            In development
+            Slack
           </h2>
         </div>
         <div
@@ -130,33 +206,84 @@ export default function IntegrationsPage() {
           }}
         >
           <div className="flex gap-4">
-              <div
-                className="flex size-14 shrink-0 items-center justify-center rounded-2xl border-2 border-[var(--badge-info-text)]/30 bg-[var(--surface)] p-2.5 text-[var(--badge-info-text)]"
-                aria-hidden
-              >
-                <IntegrationLogo
-                  logoUrl={IN_DEV.logoUrl}
-                  fallbackIcon={IN_DEV.icon}
-                  sizeClass="size-8"
-                />
-              </div>
-              <div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <h3 className="text-[18px] font-semibold text-[var(--text-primary)]">
-                    {IN_DEV.name}
-                  </h3>
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--badge-info-bg)] px-2.5 py-1 text-[11px] font-semibold text-[var(--badge-info-text)]">
-                    <span className="relative flex size-1.5">
-                      <span className="absolute inline-flex size-full animate-ping rounded-full bg-[var(--badge-info-text)] opacity-75" />
-                      <span className="relative inline-flex size-1.5 rounded-full bg-[var(--badge-info-text)]" />
-                    </span>
-                    Building
+            <div
+              className="flex size-14 shrink-0 items-center justify-center rounded-2xl border-2 border-[var(--badge-info-text)]/30 bg-[var(--surface)] p-2.5 text-[var(--badge-info-text)]"
+              aria-hidden
+            >
+              <IntegrationLogo logoUrl={LOGOS.slack} fallbackIcon={MessageCircle} sizeClass="size-8" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <h3 className="text-[18px] font-semibold text-[var(--text-primary)]">Slack</h3>
+                {slackStatus?.connected && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-[var(--badge-success-bg)] px-2 py-0.5 text-[11px] font-semibold text-[var(--badge-success-text)]">
+                    <Check className="size-3" /> Connected
                   </span>
-                </div>
-                <p className="mt-2 text-[14px] leading-relaxed text-[var(--helper-text)]">
-                  {IN_DEV.description}
-                </p>
+                )}
               </div>
+              <p className="mt-2 text-[14px] leading-relaxed text-[var(--helper-text)]">
+                Post in a channel to create to-dos. We show who added each item and link back to the message.
+              </p>
+              {message === "connected" && (
+                <p className="mt-2 text-[14px] text-[var(--badge-success-text)]">Slack connected. Pick a channel below.</p>
+              )}
+              {message === "error" && (
+                <p className="mt-2 text-[14px] text-[var(--badge-warning-text)]">Slack connection failed. Try again.</p>
+              )}
+              {!slackLoading && !slackStatus?.connected && (
+                <button type="button" onClick={connectSlack} className={btnPrimary + " mt-4 inline-flex gap-2"}>
+                  <MessageCircle className="size-4" />
+                  Connect to Slack
+                </button>
+              )}
+              {slackStatus?.connected && (
+                <div className="mt-6">
+                  <div className="text-[13px] font-medium text-[var(--text-secondary)]">To-do channel</div>
+                  <p className="mt-1 text-[13px] text-[var(--text-muted)]">
+                    Messages in the selected channel become to-dos. Invite the Roof Flow app to the channel in Slack if needed.
+                  </p>
+                  {channelLoading ? (
+                    <p className="mt-3 text-[13px] text-[var(--text-muted)]">Loading channels…</p>
+                  ) : (
+                    <div className="mt-3 space-y-2">
+                      {(slackChannels ?? []).map((ch) => (
+                        <div key={ch.id} className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => selectChannel(ch.id, ch.name)}
+                            disabled={setChannelLoadingId !== null}
+                            className={`inline-flex items-center gap-2 rounded-[var(--radius)] border px-3 py-2 text-[14px] ${slackStatus.channelId === ch.id ? "border-[var(--badge-info-text)] bg-[var(--badge-info-bg)] text-[var(--badge-info-text)]" : "border-[var(--border)] bg-[var(--surface)] text-[var(--text-primary)] hover:border-[var(--text-muted)]"}`}
+                          >
+                            #{ch.name}
+                            {slackStatus.channelId === ch.id && <Check className="size-4" />}
+                          </button>
+                        </div>
+                      ))}
+                      <div className="flex flex-wrap items-center gap-2 pt-2">
+                        <span className="text-[13px] text-[var(--text-muted)]">Add new channel:</span>
+                        <input
+                          type="text"
+                          value={newChannelName}
+                          onChange={(e) => setNewChannelName(e.target.value)}
+                          placeholder="e.g. roof-flow-todos"
+                          className={inputBase + " w-48"}
+                          aria-label="New channel name"
+                        />
+                        <button
+                          type="button"
+                          onClick={createChannel}
+                          disabled={creatingChannel || newChannelName.trim().length < 2}
+                          className={btnSecondary + " inline-flex gap-1"}
+                        >
+                          <Plus className="size-4" />
+                          Create channel
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </section>
@@ -205,5 +332,13 @@ export default function IntegrationsPage() {
         sidebar and tell us which integration you need.
       </p>
     </div>
+  );
+}
+
+export default function IntegrationsPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-[var(--text-muted)]">Loading…</div>}>
+      <IntegrationsContent />
+    </Suspense>
   );
 }

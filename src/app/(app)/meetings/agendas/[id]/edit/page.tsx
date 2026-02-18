@@ -249,6 +249,7 @@ export default function EditAgendaPage({
                   role="button"
                   tabIndex={0}
                   aria-label="Drag to reorder"
+                  title="Drag to reorder this section"
                   onKeyDown={(e) => {
                     if (e.key === " " || e.key === "Enter") e.preventDefault();
                   }}

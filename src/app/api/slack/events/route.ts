@@ -1,0 +1,146 @@
+import { NextRequest, NextResponse } from "next/server";
+import { verifySlackRequest } from "@/lib/slack/verify";
+import { getAdminDb } from "@/lib/firebase/admin";
+
+const SLACK_SIGNING_SECRET = process.env.SLACK_SIGNING_SECRET;
+const COMPANY_ID = process.env.NEXT_PUBLIC_COMPANY_ID || "c_roofco";
+const TEAM_ID = process.env.NEXT_PUBLIC_TEAM_ID || "t_leadership";
+
+const TITLE_MAX_LEN = 500;
+
+export async function POST(request: NextRequest) {
+  const rawBody = await request.text();
+  const signature = request.headers.get("x-slack-signature") ?? null;
+  if (!SLACK_SIGNING_SECRET || !verifySlackRequest(rawBody, signature, SLACK_SIGNING_SECRET)) {
+    return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
+  }
+
+  let payload: {
+    type?: string;
+    challenge?: string;
+    team_id?: string;
+    event?: {
+      type?: string;
+      channel?: string;
+      user?: string;
+      text?: string;
+      ts?: string;
+      thread_ts?: string;
+      bot_id?: string;
+    };
+  };
+  try {
+    payload = JSON.parse(rawBody);
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  }
+
+  if (payload.type === "url_verification" && typeof payload.challenge === "string") {
+    return NextResponse.json({ challenge: payload.challenge });
+  }
+
+  if (payload.type !== "event_callback" || !payload.event) {
+    return NextResponse.json({ ok: true });
+  }
+
+  const event = payload.event;
+  if (event.type !== "message") {
+    return NextResponse.json({ ok: true });
+  }
+
+  if (event.bot_id) return NextResponse.json({ ok: true });
+  if (event.thread_ts && event.thread_ts !== event.ts) return NextResponse.json({ ok: true });
+  const text = (event.text ?? "").trim();
+  if (!text) return NextResponse.json({ ok: true });
+
+  const db = getAdminDb();
+  if (!db) return NextResponse.json({ ok: true });
+
+  const configSnap = await db
+    .collection("companies")
+    .doc(COMPANY_ID)
+    .collection("teams")
+    .doc(TEAM_ID)
+    .collection("config")
+    .doc("slack")
+    .get();
+  const config = configSnap.data();
+  const channelId = config?.channelId as string | undefined;
+  const token = config?.accessToken as string | undefined;
+  if (!channelId || event.channel !== channelId || !token) {
+    return NextResponse.json({ ok: true });
+  }
+
+  const channelName = (config?.channelName as string) ?? "";
+  const slackTeamId = config?.slackTeamId as string | undefined;
+  if (slackTeamId && payload.team_id !== slackTeamId) return NextResponse.json({ ok: true });
+
+  const existingSnap = await db
+    .collection("companies")
+    .doc(COMPANY_ID)
+    .collection("teams")
+    .doc(TEAM_ID)
+    .collection("todos")
+    .where("sourceMeta.slackMessageTs", "==", event.ts)
+    .limit(1)
+    .get();
+  if (!existingSnap.empty) return NextResponse.json({ ok: true });
+
+  const userRes = await fetch(`https://slack.com/api/users.info?user=${event.user}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  const userData = (await userRes.json()) as { ok?: boolean; user?: { real_name?: string; name?: string } };
+  const slackUserDisplayName = userData.ok && userData.user ? (userData.user.real_name || userData.user.name || "Slack user") : "Slack user";
+
+  const permalinkRes = await fetch(
+    `https://slack.com/api/chat.getPermalink?channel=${event.channel}&message_ts=${event.ts}`,
+    { headers: { Authorization: `Bearer ${token}` } }
+  );
+  const permalinkData = (await permalinkRes.json()) as { ok?: boolean; permalink?: string };
+  const slackMessageUrl = permalinkData.ok && permalinkData.permalink ? permalinkData.permalink : undefined;
+
+  const title = text.length > TITLE_MAX_LEN ? text.slice(0, TITLE_MAX_LEN - 1) + "…" : text;
+  const now = new Date().toISOString();
+  const todoId = `td_${crypto.randomUUID().slice(0, 10)}`;
+  const todoRef = db
+    .collection("companies")
+    .doc(COMPANY_ID)
+    .collection("teams")
+    .doc(TEAM_ID)
+    .collection("todos")
+    .doc(todoId);
+  await todoRef.set({
+    id: todoId,
+    title,
+    status: "open",
+    createdAt: now,
+    source: "slack",
+    sourceMeta: {
+      slackChannelId: event.channel,
+      slackChannelName: channelName,
+      slackMessageTs: event.ts,
+      slackMessageUrl,
+      slackUserDisplayName,
+    },
+  });
+
+  const replyRes = await fetch("https://slack.com/api/chat.postMessage", {
+    method: "POST",
+    headers: { "Content-Type": "application/json; charset=utf-8", Authorization: `Bearer ${token}` },
+    body: JSON.stringify({
+      channel: event.channel,
+      thread_ts: event.ts,
+      text: `Created to-do: ${title}`,
+    }),
+  });
+  if (!replyRes.ok) {
+    try {
+      const err = await replyRes.json();
+      console.error("Slack chat.postMessage error", err);
+    } catch {
+      console.error("Slack chat.postMessage failed", replyRes.status);
+    }
+  }
+
+  return NextResponse.json({ ok: true });
+}

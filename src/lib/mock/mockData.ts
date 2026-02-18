@@ -159,6 +159,19 @@ export function createInitialMockDb(): MockDb {
       status: "open",
       createdAt: iso(now),
     },
+    {
+      id: "td_slack1",
+      title: "Call Brian",
+      status: "open",
+      createdAt: iso(now),
+      source: "slack",
+      sourceMeta: {
+        slackChannelName: "roof-flow-todos",
+        slackMessageTs: "1234567890.123456",
+        slackMessageUrl: "https://example.slack.com/archives/C01234/p1234567890123456",
+        slackUserDisplayName: "jane",
+      },
+    },
   ];
 
   const issues: IssueItem[] = [

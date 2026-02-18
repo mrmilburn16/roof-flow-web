@@ -52,16 +52,30 @@ export type User = {
 
 export type TodoStatus = "open" | "done";
 
+/** Metadata when to-do was created from Slack (message → to-do). */
+export type TodoSourceMetaSlack = {
+  slackChannelId?: string;
+  slackChannelName?: string;
+  slackMessageTs?: string;
+  slackMessageUrl?: string;
+  slackUserDisplayName?: string;
+};
+
 export type TodoItem = {
   id: string;
   title: string;
-  ownerId: string;
+  /** Person responsible. Optional when unassigned (e.g. Slack-created). */
+  ownerId?: string;
   dueDate?: string; // ISO date
   status: TodoStatus;
   notes?: string;
   createdAt: string; // ISO
   completedAt?: string; // ISO, set when status becomes "done"
   completedBy?: string; // userId who marked it done
+  /** How the to-do was created. */
+  source?: "app" | "slack";
+  /** Set when source === "slack". Used for "From Slack · @name" and "View in Slack". */
+  sourceMeta?: TodoSourceMetaSlack;
 };
 
 export type IssueStatus = "open" | "resolved";

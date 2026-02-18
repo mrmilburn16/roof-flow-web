@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState, useRef, useEffect } from "react";
-import { Plus, CheckSquare, Square, Play, User, RotateCcw } from "lucide-react";
+import { Plus, CheckSquare, Square, Play, User, RotateCcw, Pencil, Trash2, ExternalLink } from "lucide-react";
 import { useMockDb } from "@/lib/mock/MockDbProvider";
 import { useToast } from "@/lib/toast/ToastProvider";
 import { PageTitle, card, inputBase, btnPrimary, btnSecondary } from "@/components/ui";
@@ -50,14 +50,122 @@ function formatDue(iso?: string): { label: string; overdue: boolean } | null {
 const RECENT_DONE_COUNT = 10;
 const COMPLETE_ANIMATION_MS = 900;
 
+function EditTodoModal({
+  todo,
+  users,
+  onSave,
+  onClose,
+  inputBase,
+  btnPrimary,
+  btnSecondary,
+}: {
+  todo: { id: string; title: string; dueDate: string; ownerId: string; notes: string };
+  users: { id: string; name: string }[];
+  onSave: (payload: { title: string; dueDate?: string; ownerId?: string; notes?: string }) => void;
+  onClose: () => void;
+  inputBase: string;
+  btnPrimary: string;
+  btnSecondary: string;
+}) {
+  const [title, setTitle] = useState(todo.title);
+  const [dueDate, setDueDate] = useState(todo.dueDate);
+  const [ownerId, setOwnerId] = useState(todo.ownerId);
+  const [notes, setNotes] = useState(todo.notes);
+  useEffect(() => {
+    setTitle(todo.title);
+    setDueDate(todo.dueDate);
+    setOwnerId(todo.ownerId);
+    setNotes(todo.notes);
+  }, [todo.id, todo.title, todo.dueDate, todo.ownerId, todo.notes]);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="edit-todo-title">
+      <div className="absolute inset-0 bg-black/50" onClick={onClose} aria-hidden />
+      <div className="relative w-full max-w-md rounded-[var(--radius-lg)] border border-[var(--surface-border)] bg-[var(--surface)] p-6 shadow-[var(--shadow-card)]">
+        <h2 id="edit-todo-title" className="text-[16px] font-semibold text-[var(--text-primary)]">Edit to-do</h2>
+        <form
+          className="mt-4 space-y-4"
+          onSubmit={(e) => {
+            e.preventDefault();
+            const trimmed = title.trim();
+            if (!trimmed) return;
+            onSave({
+              title: trimmed,
+              dueDate: dueDate.trim() || undefined,
+              ownerId: ownerId.trim() || undefined,
+              notes: notes.trim() || undefined,
+            });
+          }}
+        >
+          <div>
+            <label htmlFor="edit-todo-title-input" className="block text-[13px] font-medium text-[var(--text-secondary)]">Title</label>
+            <input
+              id="edit-todo-title-input"
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              className={inputBase + " mt-1 w-full"}
+              aria-label="To-do title"
+            />
+          </div>
+          <div>
+            <label htmlFor="edit-todo-due" className="block text-[13px] font-medium text-[var(--text-secondary)]">Due date</label>
+            <input
+              id="edit-todo-due"
+              type="date"
+              value={dueDate}
+              onChange={(e) => setDueDate(e.target.value)}
+              className={inputBase + " mt-1 w-full"}
+              aria-label="Due date"
+            />
+          </div>
+          <div>
+            <label htmlFor="edit-todo-owner" className="block text-[13px] font-medium text-[var(--text-secondary)]">Owner</label>
+            <select
+              id="edit-todo-owner"
+              value={ownerId}
+              onChange={(e) => setOwnerId(e.target.value)}
+              className={inputBase + " mt-1 w-full"}
+              aria-label="Owner"
+            >
+              <option value="">Unassigned</option>
+              {users.map((u) => (
+                <option key={u.id} value={u.id}>{u.name}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label htmlFor="edit-todo-notes" className="block text-[13px] font-medium text-[var(--text-secondary)]">Notes</label>
+            <textarea
+              id="edit-todo-notes"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              rows={3}
+              className={inputBase + " mt-1 w-full resize-y"}
+              aria-label="Notes"
+            />
+          </div>
+          <div className="flex justify-end gap-2">
+            <button type="button" onClick={onClose} className={btnSecondary}>Cancel</button>
+            <button type="submit" className={btnPrimary}>Save</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 export default function TodosPage() {
-  const { db, createTodo, toggleTodo } = useMockDb();
+  const { db, createTodo, toggleTodo, updateTodo, deleteTodo, hasPermission } = useMockDb();
   const { toast } = useToast();
   const [modalOpen, setModalOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [completingId, setCompletingId] = useState<string | null>(null);
+  const [editTodo, setEditTodo] = useState<{ id: string; title: string; dueDate: string; ownerId: string; notes: string } | null>(null);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const modalInputRef = useRef<HTMLInputElement>(null);
   const completeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const canEditTodos = hasPermission("edit_todos");
 
   const handleComplete = (id: string) => {
     if (completingId) return;
@@ -153,6 +261,57 @@ export default function TodosPage() {
           </button>
         </div>
 
+        {editTodo && (
+          <EditTodoModal
+            todo={editTodo}
+            users={db.users}
+            onSave={(payload) => {
+              updateTodo(editTodo.id, payload);
+              setEditTodo(null);
+              toast("To-do updated", "success");
+            }}
+            onClose={() => setEditTodo(null)}
+            inputBase={inputBase}
+            btnPrimary={btnPrimary}
+            btnSecondary={btnSecondary}
+          />
+        )}
+
+        {deleteConfirmId && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="delete-todo-title"
+          >
+            <div className="absolute inset-0 bg-black/50" onClick={() => setDeleteConfirmId(null)} aria-hidden />
+            <div className="relative w-full max-w-sm rounded-[var(--radius-lg)] border border-[var(--surface-border)] bg-[var(--surface)] p-6 shadow-[var(--shadow-card)]">
+              <h2 id="delete-todo-title" className="text-[16px] font-semibold text-[var(--text-primary)]">
+                Delete to-do?
+              </h2>
+              <p className="mt-2 text-[14px] text-[var(--text-muted)]">
+                This cannot be undone.
+              </p>
+              <div className="mt-6 flex justify-end gap-2">
+                <button type="button" onClick={() => setDeleteConfirmId(null)} className={btnSecondary}>
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    deleteTodo(deleteConfirmId);
+                    setDeleteConfirmId(null);
+                    toast("To-do deleted", "success");
+                  }}
+                  className={btnPrimary + " bg-[var(--badge-warning-bg)] text-[var(--badge-warning-text)] hover:opacity-90"}
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {modalOpen && (
           <div
             className="fixed inset-0 z-50 flex items-center justify-center p-4"
@@ -235,7 +394,11 @@ export default function TodosPage() {
           ) : (
             openTodos.map((t) => {
               const due = formatDue(t.dueDate);
-              const ownerName = userById.get(t.ownerId) ?? "";
+              const ownerName = t.ownerId ? (userById.get(t.ownerId) ?? "") : "";
+              const isSlack = t.source === "slack" && t.sourceMeta;
+              const slackName = t.sourceMeta?.slackUserDisplayName ?? "Slack";
+              const slackChannel = t.sourceMeta?.slackChannelName;
+              const slackUrl = t.sourceMeta?.slackMessageUrl;
               const isCompleting = completingId === t.id;
               return (
                 <div
@@ -276,11 +439,31 @@ export default function TodosPage() {
                       )}
                       {ownerName && (
                         <>
-                          {due && <span>·</span>}
+                          {(due || isSlack) && <span>·</span>}
                           <span className="flex items-center gap-1">
                             <User className="size-3" />
                             {ownerName}
                           </span>
+                        </>
+                      )}
+                      {isSlack && (
+                        <>
+                          {(due || ownerName) && <span>·</span>}
+                          <span className="flex items-center gap-1">
+                            From Slack{slackName ? ` · @${slackName}` : ""}
+                            {slackChannel ? ` · #${slackChannel}` : ""}
+                          </span>
+                          {slackUrl && (
+                            <a
+                              href={slackUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-0.5 text-[var(--badge-info-text)] hover:underline"
+                            >
+                              View in Slack
+                              <ExternalLink className="size-3" />
+                            </a>
+                          )}
                         </>
                       )}
                     </div>
@@ -290,6 +473,34 @@ export default function TodosPage() {
                       </p>
                     )}
                   </div>
+                  {canEditTodos && (
+                    <div className="flex shrink-0 items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => setEditTodo({
+                          id: t.id,
+                          title: t.title,
+                          dueDate: t.dueDate ?? "",
+                          ownerId: t.ownerId ?? "",
+                          notes: t.notes ?? "",
+                        })}
+                        className="rounded-[var(--radius)] p-2 text-[var(--text-muted)] hover:bg-[var(--muted-bg)] hover:text-[var(--text-primary)]"
+                        title="Edit to-do"
+                        aria-label={`Edit "${t.title}"`}
+                      >
+                        <Pencil className="size-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setDeleteConfirmId(t.id)}
+                        className="rounded-[var(--radius)] p-2 text-[var(--text-muted)] hover:bg-[var(--badge-warning-bg)] hover:text-[var(--badge-warning-text)]"
+                        title="Delete to-do"
+                        aria-label={`Delete "${t.title}"`}
+                      >
+                        <Trash2 className="size-4" />
+                      </button>
+                    </div>
+                  )}
                 </div>
               );
             })
@@ -328,9 +539,7 @@ export default function TodosPage() {
                           {t.dueDate && <span>·</span>}
                           <span>
                             Completed{t.completedAt ? ` ${formatCompletedDate(t.completedAt)}` : ""}
-                            {t.completedBy && userById.get(t.completedBy)
-                              ? ` by ${userById.get(t.completedBy)}`
-                              : ""}
+                            {t.completedBy && (userById.get(t.completedBy) ? ` by ${userById.get(t.completedBy)}` : "")}
                           </span>
                         </>
                       )}

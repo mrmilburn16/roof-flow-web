@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { Suspense, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { collection, doc, setDoc } from "firebase/firestore";
 import { Settings, Palette, Database, Zap, Shield, User, Users, Layout } from "lucide-react";
@@ -18,7 +18,7 @@ const THEME_OPTIONS_USER = [
   { value: "onyx", label: "Onyx — Dark mode", description: "Easy on the eyes. Ideal for low light." },
 ];
 
-export default function SettingsPage() {
+function SettingsContent() {
   const searchParams = useSearchParams();
   const isV2 = searchParams?.get("v") === "2";
 
@@ -384,5 +384,13 @@ export default function SettingsPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function SettingsPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-[var(--text-muted)]">Loading…</div>}>
+      <SettingsContent />
+    </Suspense>
   );
 }

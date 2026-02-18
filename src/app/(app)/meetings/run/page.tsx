@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState, useCallback, useEffect } from "react";
+import { Suspense, useMemo, useState, useCallback, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import type { MeetingSectionKind } from "@/lib/domain";
 import { Plus, Copy, Check, Square } from "lucide-react";
@@ -59,7 +59,7 @@ function isValidWeekParam(s: string | null): s is string {
   return date.getFullYear() === y && date.getMonth() === m - 1 && date.getDate() === d;
 }
 
-export default function MeetingRunPage() {
+function MeetingRunContent() {
   const searchParams = useSearchParams();
   const templateIdFromUrl = searchParams.get("template");
   const weekParam = searchParams.get("week");
@@ -137,7 +137,7 @@ export default function MeetingRunPage() {
     if (open.length > 0) {
       lines.push("OPEN TO-DOS");
       open.forEach((t) => {
-        const owner = userById.get(t.ownerId) ?? t.ownerId;
+        const owner = t.ownerId ? (userById.get(t.ownerId) ?? t.ownerId) : "Unassigned";
         lines.push(`• ${t.title} (${owner})`);
       });
       lines.push("");
@@ -495,10 +495,21 @@ export default function MeetingRunPage() {
                         </div>
                         <div className="mt-0.5 flex flex-wrap items-center gap-2 text-[12px] text-[var(--text-muted)]">
                           {t.dueDate && <span>Due {formatDueDate(t.dueDate)}</span>}
-                          {userById.get(t.ownerId) && (
+                          {t.ownerId && userById.get(t.ownerId) && (
                             <>
                               {t.dueDate && <span>·</span>}
                               <span>{userById.get(t.ownerId)}</span>
+                            </>
+                          )}
+                          {t.source === "slack" && t.sourceMeta && (
+                            <>
+                              {(t.dueDate || t.ownerId) && <span>·</span>}
+                              <span>From Slack{t.sourceMeta.slackUserDisplayName ? ` · @${t.sourceMeta.slackUserDisplayName}` : ""}</span>
+                              {t.sourceMeta.slackMessageUrl && (
+                                <a href={t.sourceMeta.slackMessageUrl} target="_blank" rel="noopener noreferrer" className="text-[var(--badge-info-text)] hover:underline">
+                                  View in Slack
+                                </a>
+                              )}
                             </>
                           )}
                         </div>
@@ -672,5 +683,13 @@ export default function MeetingRunPage() {
         </div>
       ) : null}
     </div>
+  );
+}
+
+export default function MeetingRunPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-[var(--text-muted)]">Loading…</div>}>
+      <MeetingRunContent />
+    </Suspense>
   );
 }

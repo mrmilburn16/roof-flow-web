@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { useMemo, useState, useRef, useEffect } from "react";
 import { TrendingUp, Calendar, Play, ChevronDown, Check, Plus, Pencil, Trash2, X } from "lucide-react";
@@ -42,7 +43,7 @@ function formatValue(value: number, unit: string) {
 const WEEK_OPTIONS_COUNT = 4;
 const UNIT_OPTIONS = ["count", "$", "%"];
 
-export default function ScorecardPage() {
+function ScorecardContent() {
   const searchParams = useSearchParams();
   const isV2 = searchParams.get("v") === "2";
   const { db, weekOf: currentWeekOf, upsertKpiEntry, createKpi, updateKpi, deleteKpi, hasPermission } = useMockDb();
@@ -581,5 +582,13 @@ export default function ScorecardPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function ScorecardPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-[var(--text-muted)]">Loading…</div>}>
+      <ScorecardContent />
+    </Suspense>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
-import type { AvatarColor, AvatarStyle, GoalStatus, MeetingSectionKind, PermissionCode } from "@/lib/domain";
+import type { AvatarColor, AvatarStyle, GoalStatus, MeetingSectionKind, PermissionCode, TodoSourceMetaSlack } from "@/lib/domain";
 import type { MeetingSection, MeetingTemplate } from "@/lib/domain";
 import type { MockDb, MeetingRunStatus, Vision } from "@/lib/mock/mockData";
 import { createInitialMockDb, startOfWeek } from "@/lib/mock/mockData";
@@ -26,7 +26,9 @@ type MockDbApi = {
   /** Throws if any user has this role. Caller should check user count and show error or reassign first. */
   deleteRole(roleId: string): void;
 
-  createTodo(title: string): void;
+  createTodo(title: string, options?: { dueDate?: string; ownerId?: string; source?: "app" | "slack"; sourceMeta?: TodoSourceMetaSlack }): void;
+  updateTodo(todoId: string, payload: { title?: string; dueDate?: string; ownerId?: string; notes?: string }): void;
+  deleteTodo(todoId: string): void;
   toggleTodo(todoId: string): void;
   createFeedback(message: string, page: string, userName?: string): void;
   deleteFeedback(feedbackId: string): void;
@@ -355,18 +357,26 @@ export function MockDbProvider({ children }: { children: React.ReactNode }) {
         }
       },
 
-      createTodo(title) {
+      createTodo(title, options) {
         const now = new Date().toISOString();
+        const ownerId =
+          options?.source === "slack" && options?.ownerId === undefined
+            ? undefined
+            : (options?.ownerId ?? me.id);
+        const payload = {
+          title,
+          ...(ownerId !== undefined && ownerId !== "" ? { ownerId } : {}),
+          status: "open" as const,
+          createdAt: now,
+          ...(options?.dueDate !== undefined ? { dueDate: options.dueDate } : {}),
+          ...(options?.source !== undefined ? { source: options.source } : {}),
+          ...(options?.sourceMeta !== undefined ? { sourceMeta: options.sourceMeta } : {}),
+        };
         if (firestore) {
           const id = `td_${crypto.randomUUID().slice(0, 10)}`;
           const ref = docRef("todos", id);
           if (ref) {
-            void setDoc(ref, {
-              title,
-              ownerId: me.id,
-              status: "open",
-              createdAt: now,
-            });
+            void setDoc(ref, payload);
             return;
           }
         }
@@ -376,12 +386,49 @@ export function MockDbProvider({ children }: { children: React.ReactNode }) {
             {
               id: `td_${crypto.randomUUID().slice(0, 6)}`,
               title,
-              ownerId: me.id,
+              ownerId: payload.ownerId,
               status: "open",
               createdAt: now,
+              dueDate: options?.dueDate,
+              source: options?.source,
+              sourceMeta: options?.sourceMeta,
             },
             ...prev.todos,
           ],
+        }));
+      },
+
+      updateTodo(todoId, payload) {
+        if (!this.hasPermission("edit_todos")) return;
+        const existing = db.todos.find((t) => t.id === todoId);
+        if (!existing) return;
+        const updates: Partial<typeof existing> = {};
+        if (payload.title !== undefined) updates.title = payload.title.trim();
+        if (payload.dueDate !== undefined) updates.dueDate = payload.dueDate || undefined;
+        if (payload.ownerId !== undefined) updates.ownerId = payload.ownerId || undefined;
+        if (payload.notes !== undefined) updates.notes = payload.notes.trim() || undefined;
+        if (Object.keys(updates).length === 0) return;
+        if (firestore) {
+          const ref = docRef("todos", todoId);
+          if (ref) void updateDoc(ref, updates);
+        }
+        setDb((prev) => ({
+          ...prev,
+          todos: prev.todos.map((t) =>
+            t.id === todoId ? { ...t, ...updates } : t,
+          ),
+        }));
+      },
+
+      deleteTodo(todoId) {
+        if (!this.hasPermission("edit_todos")) return;
+        if (firestore) {
+          const ref = docRef("todos", todoId);
+          if (ref) void deleteDoc(ref);
+        }
+        setDb((prev) => ({
+          ...prev,
+          todos: prev.todos.filter((t) => t.id !== todoId),
         }));
       },
 
