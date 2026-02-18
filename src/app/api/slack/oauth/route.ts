@@ -11,11 +11,12 @@ export function GET(_request: NextRequest) {
       { status: 503 }
     );
   }
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL
+  let baseUrl = process.env.NEXT_PUBLIC_APP_URL
     ? process.env.NEXT_PUBLIC_APP_URL.replace(/\/$/, "")
     : process.env.VERCEL_URL
       ? `https://${process.env.VERCEL_URL}`
       : "http://localhost:3000";
+  if (baseUrl && !/^https?:\/\//i.test(baseUrl)) baseUrl = `https://${baseUrl}`;
   const redirectUri = `${baseUrl}/api/slack/callback`;
   const state = crypto.randomUUID();
   const url = new URL("https://slack.com/oauth/v2/authorize");
