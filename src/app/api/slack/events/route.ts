@@ -8,6 +8,7 @@ const TEAM_ID = process.env.NEXT_PUBLIC_TEAM_ID || "t_leadership";
 
 const TITLE_MAX_LEN = 500;
 
+/** Handles Slack Events API: url_verification and message events. */
 export async function POST(request: NextRequest) {
   const rawBody = await request.text();
 
