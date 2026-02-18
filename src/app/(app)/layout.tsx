@@ -1,5 +1,7 @@
 import { SidebarNav } from "@/components/SidebarNav";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { FeedbackButton } from "@/components/FeedbackButton";
+import { BetaBadge } from "@/components/BetaBadge";
 import { AppPageTitle } from "@/components/AppPageTitle";
 import { PageTransition } from "@/components/PageTransition";
 import { RequireAuth } from "@/components/RequireAuth";
@@ -22,17 +24,21 @@ export default function AppLayout({
                 borderRight: "1px solid var(--sidebar-border)",
               }}
             >
-              <div className="shrink-0 px-5 py-4">
-                <div className="text-[15px] font-semibold tracking-[-0.02em] text-[var(--text-primary)]">
-                  RoofFlow
+              <div className="flex shrink-0 items-start justify-between gap-2 px-5 py-4">
+                <div>
+                  <div className="text-[15px] font-semibold tracking-[-0.02em] text-[var(--text-primary)]">
+                    RoofFlow
+                  </div>
+                  <div className="mt-0.5 text-[13px] text-[var(--text-muted)]">
+                    Leadership Team
+                  </div>
                 </div>
-                <div className="mt-0.5 text-[13px] text-[var(--text-muted)]">
-                  Leadership Team
-                </div>
+                <BetaBadge />
               </div>
               <div className="min-h-0 flex-1 flex flex-col overflow-hidden">
                 <SidebarNav />
-                <div className="mt-auto shrink-0">
+                <div className="mt-auto shrink-0 space-y-1 px-3 pb-3">
+                  <FeedbackButton />
                   <ThemeToggle />
                 </div>
               </div>

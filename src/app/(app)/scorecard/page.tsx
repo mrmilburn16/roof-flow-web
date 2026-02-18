@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useMemo, useState, useRef, useEffect } from "react";
 import { TrendingUp, Calendar, Play, ChevronDown, Check, Plus, Pencil, Trash2, X } from "lucide-react";
 import { useMockDb } from "@/lib/mock/MockDbProvider";
@@ -18,6 +19,16 @@ function formatWeekLabel(weekOf: string) {
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
+/** Format week as Mon–Fri work week (weekOf is Monday). */
+function formatWeekRange(weekOf: string) {
+  const mon = new Date(weekOf + "T12:00:00");
+  const fri = new Date(mon);
+  fri.setDate(fri.getDate() + 4);
+  const monStr = mon.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  const friStr = fri.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  return `${monStr} – ${friStr}`;
+}
+
 function isGood(_unit: string, value: number, goal: number) {
   return value >= goal;
 }
@@ -32,6 +43,8 @@ const WEEK_OPTIONS_COUNT = 4;
 const UNIT_OPTIONS = ["count", "$", "%"];
 
 export default function ScorecardPage() {
+  const searchParams = useSearchParams();
+  const isV2 = searchParams.get("v") === "2";
   const { db, weekOf: currentWeekOf, upsertKpiEntry, createKpi, updateKpi, deleteKpi, hasPermission } = useMockDb();
   const { toast } = useToast();
   const [drafts, setDrafts] = useState<Record<string, string>>({});
@@ -196,6 +209,15 @@ export default function ScorecardPage() {
               <div>
                 <div className="text-[15px] font-semibold text-[var(--text-primary)]">
                   Weekly KPIs
+                  {isV2 ? (
+                    <Link href="/scorecard" className="ml-2 text-[12px] font-normal text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:underline">
+                      View original design
+                    </Link>
+                  ) : (
+                    <Link href="/scorecard?v=2" className="ml-2 text-[12px] font-normal text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:underline">
+                      Try 2.0 design
+                    </Link>
+                  )}
                 </div>
                 <div className="mt-1 flex flex-wrap items-center gap-2">
                   <div className="relative inline-block" ref={weekDropdownRef}>
@@ -209,8 +231,8 @@ export default function ScorecardPage() {
                     >
                       <span className="truncate">
                         {selectedWeekOf === currentWeekOf
-                          ? `This week (${formatWeekLabel(selectedWeekOf)})`
-                          : formatWeekLabel(selectedWeekOf)}
+                          ? `This week (${formatWeekRange(selectedWeekOf)})`
+                          : formatWeekRange(selectedWeekOf)}
                       </span>
                     </button>
                     <ChevronDown
@@ -223,7 +245,7 @@ export default function ScorecardPage() {
                         role="listbox"
                       >
                         {weekOptions.map((w) => {
-                          const label = w === currentWeekOf ? `This week (${formatWeekLabel(w)})` : formatWeekLabel(w);
+                          const label = w === currentWeekOf ? `This week (${formatWeekRange(w)})` : formatWeekRange(w);
                           const selected = w === selectedWeekOf;
                           return (
                             <li key={w} role="option" aria-selected={selected}>
@@ -248,106 +270,212 @@ export default function ScorecardPage() {
                   </div>
                 </div>
               </div>
-              <div className="flex flex-wrap gap-3 text-[12px]">
-                <span className="text-[var(--text-muted)]">
-                  <span className="font-semibold text-[var(--badge-success-text)]">{summary.onTrack} on</span>
-                  {" · "}
-                  <span className="font-semibold text-[var(--badge-warning-text)]">{summary.offTrack} off</span>
-                  {summary.missing > 0 && (
-                    <>
-                      {" · "}
-                      <span className="font-medium text-[var(--text-muted)]">{summary.missing} missing</span>
-                    </>
-                  )}
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--badge-success-bg)] px-2.5 py-1 text-[11px] font-medium text-[var(--badge-success-text)]">
+                  {summary.onTrack} On track
                 </span>
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--badge-warning-bg)] px-2.5 py-1 text-[11px] font-medium text-[var(--badge-warning-text)]">
+                  {summary.offTrack} Off track
+                </span>
+                {summary.missing > 0 && (
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--muted-bg)] border border-[var(--border)] px-2.5 py-1 text-[11px] font-medium text-[var(--text-muted)]">
+                    {summary.missing} Missing
+                  </span>
+                )}
               </div>
             </div>
           </div>
 
-          <div className="overflow-x-auto">
-            <div className="grid min-w-[640px] grid-cols-[1fr_100px_100px_180px] gap-4 border-b border-[var(--border)] bg-[var(--muted-bg)] px-5 py-3 text-[12px] font-medium uppercase tracking-wider text-[var(--text-secondary)]">
-              <div>KPI</div>
-              <div className="text-right">Goal</div>
-              <div className="text-right">This week</div>
-              <div className="text-right">Update</div>
-            </div>
-            <div className="divide-y divide-[var(--border)]">
-              {kpis.map((k) => {
-                const current = entryByKpi.get(k.id);
-                const good =
-                  typeof current === "number"
-                    ? isGood(k.unit, current, k.goal)
-                    : null;
-                const status =
-                  good === null
-                    ? ("neutral" as const)
-                    : good
-                      ? ("success" as const)
-                      : ("warning" as const);
-                const label = good === null ? "Missing" : good ? "On" : "Off";
-                const ownerName = userById.get(k.ownerId) ?? "";
-
+          <div className={isV2 ? "space-y-4" : "overflow-x-auto"}>
+            {isV2 ? (
+              (() => {
+                const sorted = [...kpis].sort((a, b) => {
+                  const ga = typeof entryByKpi.get(a.id) === "number" ? isGood(a.unit, entryByKpi.get(a.id)!, a.goal) : null;
+                  const gb = typeof entryByKpi.get(b.id) === "number" ? isGood(b.unit, entryByKpi.get(b.id)!, b.goal) : null;
+                  const order = (x: boolean | null) => (x === false ? 0 : x === true ? 1 : 2);
+                  return order(ga) - order(gb);
+                });
                 return (
-                  <div
-                    key={k.id}
-                    className="grid min-w-[640px] grid-cols-[1fr_100px_100px_180px] items-center gap-4 px-5 py-4"
-                  >
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="text-[14px] font-medium text-[var(--text-primary)]">
-                          {k.title}
-                        </span>
-                        {canEditKpis && (
-                          <button
-                            type="button"
-                            onClick={() => openEditKpiModal(k)}
-                            className="rounded-[var(--radius)] p-1.5 text-[var(--text-muted)] hover:bg-[var(--nav-hover-bg)] hover:text-[var(--text-primary)]"
-                            aria-label={`Edit ${k.title}`}
-                          >
-                            <Pencil className="size-3.5" />
-                          </button>
-                        )}
-                      </div>
-                      <div className="mt-1 flex flex-wrap items-center gap-2">
-                        <StatusBadge status={status} label={label} />
-                        {ownerName && (
-                          <span className="text-[12px] text-[var(--text-muted)]">
-                            {ownerName}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    <div className="text-right text-[14px] text-[var(--text-secondary)]">
-                      {formatValue(k.goal, k.unit)}
-                    </div>
-                    <div className="text-right text-[14px] font-semibold text-[var(--text-primary)]">
-                      {typeof current === "number" ? (
-                        formatValue(current, k.unit)
-                      ) : (
-                        <span className="font-normal text-[var(--text-muted)]">—</span>
-                      )}
-                    </div>
-                    <div className="flex justify-end gap-2">
-                      <input
-                        value={drafts[k.id] ?? ""}
-                        onChange={(e) =>
-                          setDrafts((p) => ({ ...p, [k.id]: e.target.value }))
-                        }
-                        placeholder="Value"
-                        className={`${inputBase} w-20`}
-                      />
-                      <button
-                        onClick={() => handleSave(k.id)}
-                        className={btnPrimary}
-                        disabled={!drafts[k.id]?.trim()}
-                      >
-                        Save
-                      </button>
-                    </div>
+                  <div className="space-y-4">
+                    {sorted.map((k) => {
+                      const current = entryByKpi.get(k.id);
+                      const good =
+                        typeof current === "number"
+                          ? isGood(k.unit, current, k.goal)
+                          : null;
+                      const status =
+                        good === null
+                          ? ("neutral" as const)
+                          : good
+                            ? ("success" as const)
+                            : ("warning" as const);
+                      const label = good === null ? "Missing" : good ? "On track" : "Off track";
+                      const ownerName = userById.get(k.ownerId) ?? "";
+                      const accent =
+                        status === "success"
+                          ? "border-l-[var(--badge-success-text)]"
+                          : status === "warning"
+                            ? "border-l-[var(--badge-warning-text)]"
+                            : "border-l-[var(--text-muted)]";
+                      return (
+                        <div
+                          key={k.id}
+                          className={`rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] pl-4 border-l-4 ${accent} pr-5 py-4 shadow-[var(--shadow-sm)] transition-shadow hover:shadow-[var(--shadow-card)]`}
+                        >
+                          <div className="flex flex-wrap items-start justify-between gap-4">
+                            <div className="min-w-0 space-y-1">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <StatusBadge status={status} label={label} />
+                                <span className="text-[15px] font-semibold text-[var(--text-primary)]">
+                                  {k.title}
+                                </span>
+                                {canEditKpis && (
+                                  <button
+                                    type="button"
+                                    onClick={() => openEditKpiModal(k)}
+                                    className="rounded-[var(--radius)] p-1.5 text-[var(--text-muted)] hover:bg-[var(--nav-hover-bg)] hover:text-[var(--text-primary)]"
+                                    aria-label={`Edit ${k.title}`}
+                                  >
+                                    <Pencil className="size-3.5" />
+                                  </button>
+                                )}
+                              </div>
+                              {ownerName && (
+                                <p className="text-[12px] text-[var(--text-muted)]">Owner: {ownerName}</p>
+                              )}
+                            </div>
+                            <div className="flex flex-wrap items-center gap-6 sm:gap-8">
+                              <div className="text-center sm:text-left">
+                                <p className="text-[11px] font-medium uppercase tracking-wider text-[var(--text-muted)]">Goal</p>
+                                <p className="mt-0.5 text-[15px] font-semibold tabular-nums text-[var(--text-secondary)]">
+                                  {formatValue(k.goal, k.unit)}
+                                </p>
+                              </div>
+                              <div className="text-center sm:text-left">
+                                <p className="text-[11px] font-medium uppercase tracking-wider text-[var(--text-muted)]">This week</p>
+                                <p className="mt-0.5 text-[18px] font-bold tabular-nums text-[var(--text-primary)]">
+                                  {typeof current === "number" ? (
+                                    formatValue(current, k.unit)
+                                  ) : (
+                                    <span className="font-normal text-[var(--text-muted)]">—</span>
+                                  )}
+                                </p>
+                              </div>
+                              <div className="flex flex-col items-end gap-2">
+                                <p className="text-[11px] font-medium uppercase tracking-wider text-[var(--text-muted)]">Update</p>
+                                <div className="flex items-center gap-2">
+                                  <input
+                                    value={drafts[k.id] ?? ""}
+                                    onChange={(e) =>
+                                      setDrafts((p) => ({ ...p, [k.id]: e.target.value }))
+                                    }
+                                    placeholder="New value"
+                                    className={`${inputBase} w-24 min-w-[5rem] bg-[var(--muted-bg)]`}
+                                  />
+                                  <button
+                                    onClick={() => handleSave(k.id)}
+                                    className={btnPrimary}
+                                    disabled={!drafts[k.id]?.trim()}
+                                  >
+                                    Save
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 );
-              })}
-            </div>
+              })()
+            ) : (
+              <>
+                <div className="grid min-w-[640px] grid-cols-[1fr_100px_100px_180px] gap-4 border-b-2 border-[var(--border)] bg-[var(--text-primary)]/[0.1] px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-[var(--text-primary)]">
+                  <div>KPI</div>
+                  <div className="text-right">Goal</div>
+                  <div className="text-right">This week</div>
+                  <div className="text-right">Update</div>
+                </div>
+                <div className="divide-y divide-[var(--border)]">
+                  {kpis.map((k) => {
+                    const current = entryByKpi.get(k.id);
+                    const good =
+                      typeof current === "number"
+                        ? isGood(k.unit, current, k.goal)
+                        : null;
+                    const status =
+                      good === null
+                        ? ("neutral" as const)
+                        : good
+                          ? ("success" as const)
+                          : ("warning" as const);
+                    const label = good === null ? "Missing" : good ? "On" : "Off";
+                    const ownerName = userById.get(k.ownerId) ?? "";
+
+                    return (
+                      <div
+                        key={k.id}
+                        className="grid min-w-[640px] grid-cols-[1fr_100px_100px_180px] items-center gap-4 px-5 py-4"
+                      >
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="text-[14px] font-medium text-[var(--text-primary)]">
+                              {k.title}
+                            </span>
+                            {canEditKpis && (
+                              <button
+                                type="button"
+                                onClick={() => openEditKpiModal(k)}
+                                className="rounded-[var(--radius)] p-1.5 text-[var(--text-muted)] hover:bg-[var(--nav-hover-bg)] hover:text-[var(--text-primary)]"
+                                aria-label={`Edit ${k.title}`}
+                              >
+                                <Pencil className="size-3.5" />
+                              </button>
+                            )}
+                          </div>
+                          <div className="mt-1 flex flex-wrap items-center gap-2">
+                            <StatusBadge status={status} label={label} />
+                            {ownerName && (
+                              <span className="text-[12px] text-[var(--text-muted)]">
+                                {ownerName}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="text-right text-[14px] text-[var(--text-secondary)]">
+                          {formatValue(k.goal, k.unit)}
+                        </div>
+                        <div className="text-right text-[14px] font-semibold text-[var(--text-primary)]">
+                          {typeof current === "number" ? (
+                            formatValue(current, k.unit)
+                          ) : (
+                            <span className="font-normal text-[var(--text-muted)]">—</span>
+                          )}
+                        </div>
+                        <div className="flex justify-end gap-2">
+                          <input
+                            value={drafts[k.id] ?? ""}
+                            onChange={(e) =>
+                              setDrafts((p) => ({ ...p, [k.id]: e.target.value }))
+                            }
+                            placeholder="Value"
+                            className={`${inputBase} w-20`}
+                          />
+                          <button
+                            onClick={() => handleSave(k.id)}
+                            className={btnPrimary}
+                            disabled={!drafts[k.id]?.trim()}
+                          >
+                            Save
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}

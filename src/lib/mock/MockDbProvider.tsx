@@ -6,7 +6,7 @@ import type { MeetingSection, MeetingTemplate } from "@/lib/domain";
 import type { MockDb, MeetingRunStatus, Vision } from "@/lib/mock/mockData";
 import { createInitialMockDb, startOfWeek } from "@/lib/mock/mockData";
 import { isFirebaseConfigured, getFirebaseDb } from "@/lib/firebase/client";
-import { collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc } from "firebase/firestore";
+import { collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc, deleteField } from "firebase/firestore";
 import { useAuth } from "@/lib/auth/AuthProvider";
 
 type MockDbApi = {
@@ -28,6 +28,7 @@ type MockDbApi = {
 
   createTodo(title: string): void;
   toggleTodo(todoId: string): void;
+  createFeedback(message: string, page: string): void;
 
   createIssue(title: string, notes?: string): void;
   resolveIssue(issueId: string): void;
@@ -171,6 +172,13 @@ export function MockDbProvider({ children }: { children: React.ReactNode }) {
       onSnapshot(base("users"), (snap) => {
         const users = snap.docs.map((d) => ({ id: d.id, ...d.data() })) as MockDb["users"];
         setDb((prev) => ({ ...prev, users }));
+      }),
+    );
+
+    unsubs.push(
+      onSnapshot(base("feedback"), (snap) => {
+        const feedback = snap.docs.map((d) => ({ id: d.id, ...d.data() })) as MockDb["feedback"];
+        setDb((prev) => ({ ...prev, feedback }));
       }),
     );
 
@@ -354,12 +362,15 @@ export function MockDbProvider({ children }: { children: React.ReactNode }) {
 
       toggleTodo(todoId) {
         const existing = db.todos.find((t) => t.id === todoId);
+        const now = new Date().toISOString();
+        const isMarkingDone = existing?.status !== "done";
         if (firestore && existing) {
           const ref = docRef("todos", todoId);
           if (ref) {
-            void updateDoc(ref, {
-              status: existing.status === "done" ? "open" : "done",
-            });
+            void updateDoc(ref, isMarkingDone
+              ? { status: "done", completedAt: now, completedBy: me.id }
+              : { status: "open", completedAt: deleteField(), completedBy: deleteField() },
+            );
             return;
           }
         }
@@ -367,9 +378,34 @@ export function MockDbProvider({ children }: { children: React.ReactNode }) {
           ...prev,
           todos: prev.todos.map((t) =>
             t.id === todoId
-              ? { ...t, status: t.status === "done" ? "open" : "done" }
+              ? isMarkingDone
+                ? { ...t, status: "done", completedAt: now, completedBy: me.id }
+                : { ...t, status: "open", completedAt: undefined, completedBy: undefined }
               : t,
           ),
+        }));
+      },
+
+      createFeedback(message, page) {
+        const trimmed = message?.trim();
+        if (!trimmed) return;
+        const now = new Date().toISOString();
+        const id = `fb_${crypto.randomUUID().slice(0, 8)}`;
+        const item = {
+          id,
+          userId: me.id,
+          userName: me.name,
+          page,
+          message: trimmed,
+          createdAt: now,
+        };
+        if (firestore) {
+          const ref = doc(firestore, "companies", companyId, "teams", teamId, "feedback", id);
+          void setDoc(ref, item);
+        }
+        setDb((prev) => ({
+          ...prev,
+          feedback: [item, ...prev.feedback],
         }));
       },
 

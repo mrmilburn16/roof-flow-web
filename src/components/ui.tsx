@@ -45,7 +45,7 @@ export function PageTitle({
         </h2>
       ) : null}
       {subtitle ? (
-        <p className={title ? "mt-1 text-[14px] leading-relaxed text-[var(--text-muted)]" : "text-[14px] leading-relaxed text-[var(--text-muted)]"}>
+        <p className={title ? "mt-1 text-[14px] leading-relaxed text-[var(--helper-text)]" : "text-[14px] leading-relaxed text-[var(--helper-text)]"}>
           {subtitle}
         </p>
       ) : null}

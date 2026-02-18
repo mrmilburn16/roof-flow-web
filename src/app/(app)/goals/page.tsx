@@ -204,7 +204,7 @@ export default function GoalsPage() {
               return (
                 <div
                   key={g.id}
-                  className="rounded-[var(--radius)] border border-[var(--border)] p-4"
+                  className="flex min-h-0 flex-col rounded-[var(--radius)] border border-[var(--border)] p-4"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
@@ -236,7 +236,7 @@ export default function GoalsPage() {
                     </div>
                     <StatusBadge status={statusVariant(g.status)} label={statusLabel(g.status)} />
                   </div>
-                  <div className="mt-4">
+                  <div className="mt-auto pt-4">
                     <GoalStatusIconPicker
                       value={g.status}
                       onChange={(s) => setGoalStatus(g.id, s)}

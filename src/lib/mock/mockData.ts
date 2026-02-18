@@ -1,4 +1,5 @@
 import type {
+  FeedbackItem,
   IssueItem,
   KpiDefinition,
   KpiEntry,
@@ -38,6 +39,7 @@ export type MockDb = {
   /** Week-of (ISO date) -> rating and optional comment after meeting. */
   meetingFeedback: Record<string, MeetingFeedback>;
   vision: Vision;
+  feedback: FeedbackItem[];
 };
 
 function iso(d: Date) {
@@ -231,6 +233,7 @@ export function createInitialMockDb(): MockDb {
       coreValues: [],
       focus: "",
     },
+    feedback: [],
   };
 }
 

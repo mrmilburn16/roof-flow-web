@@ -26,6 +26,12 @@ export function formatDateLong(iso: string): string {
   return `${month} ${ordinal(d.getDate())}, ${d.getFullYear()}`;
 }
 
+/** e.g. "Feb 20, 2026" */
+function formatCompletedDate(iso: string): string {
+  const d = new Date(iso + "T12:00:00");
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
+
 function formatDue(iso?: string): { label: string; overdue: boolean } | null {
   if (!iso) return null;
   const d = new Date(iso + "T12:00:00");
@@ -42,13 +48,32 @@ function formatDue(iso?: string): { label: string; overdue: boolean } | null {
 }
 
 const RECENT_DONE_COUNT = 10;
+const COMPLETE_ANIMATION_MS = 900;
 
 export default function TodosPage() {
   const { db, createTodo, toggleTodo } = useMockDb();
   const { toast } = useToast();
   const [modalOpen, setModalOpen] = useState(false);
   const [title, setTitle] = useState("");
+  const [completingId, setCompletingId] = useState<string | null>(null);
   const modalInputRef = useRef<HTMLInputElement>(null);
+  const completeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleComplete = (id: string) => {
+    if (completingId) return;
+    setCompletingId(id);
+    completeTimeoutRef.current = setTimeout(() => {
+      toggleTodo(id);
+      setCompletingId(null);
+      completeTimeoutRef.current = null;
+    }, COMPLETE_ANIMATION_MS);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (completeTimeoutRef.current) clearTimeout(completeTimeoutRef.current);
+    };
+  }, []);
 
   useEffect(() => {
     if (modalOpen) {
@@ -197,7 +222,6 @@ export default function TodosPage() {
           {openTodos.length === 0 ? (
             <div className="px-5">
               <EmptyState
-                icon={Square}
                 title="No open To-Dos"
                 description="Click “Add to-do” above or capture items during the meeting."
                 action={
@@ -212,25 +236,36 @@ export default function TodosPage() {
             openTodos.map((t) => {
               const due = formatDue(t.dueDate);
               const ownerName = userById.get(t.ownerId) ?? "";
+              const isCompleting = completingId === t.id;
               return (
                 <div
                   key={t.id}
-                  className="flex items-start gap-4 px-5 py-4 transition hover:bg-[var(--muted-bg)]"
+                  className={`flex items-start gap-4 px-5 py-4 transition hover:bg-[var(--muted-bg)] ${isCompleting ? "opacity-90" : ""}`}
                 >
                   <button
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
-                      toggleTodo(t.id);
+                      handleComplete(t.id);
                     }}
-                    className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] text-[var(--text-muted)] hover:border-[var(--text-muted)] hover:text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--ring)]"
+                    disabled={isCompleting}
+                    className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] text-[var(--text-muted)] hover:border-[var(--text-muted)] hover:text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--ring)] disabled:pointer-events-none"
                     title="Mark done"
                     aria-label={`Mark “${t.title}” as done`}
                   >
-                    <Square className="size-4" />
+                    {isCompleting ? (
+                      <CheckSquare
+                        className="size-4 text-[var(--badge-success-text)] [animation:todo-check-in_0.9s_ease-out_forwards]"
+                        aria-hidden
+                      />
+                    ) : (
+                      <Square className="size-4" />
+                    )}
                   </button>
                   <div className="min-w-0 flex-1">
-                    <div className="text-[14px] font-medium text-[var(--text-primary)]">
+                    <div
+                      className={`text-[14px] font-medium text-[var(--text-primary)] ${isCompleting ? "line-through text-[var(--text-secondary)]" : ""}`}
+                    >
                       {t.title}
                     </div>
                     <div className="mt-1 flex flex-wrap items-center gap-2 text-[12px] text-[var(--text-muted)]">
@@ -284,11 +319,22 @@ export default function TodosPage() {
                     <div className="text-[14px] text-[var(--text-secondary)] line-through">
                       {t.title}
                     </div>
-                    {t.dueDate && (
-                      <div className="mt-0.5 text-[12px] text-[var(--text-muted)]">
-                        Due {formatDateLong(t.dueDate)}
-                      </div>
-                    )}
+                    <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[12px] text-[var(--text-muted)]">
+                      {t.dueDate && (
+                        <span>Due {formatDateLong(t.dueDate)}</span>
+                      )}
+                      {(t.completedAt || t.completedBy) && (
+                        <>
+                          {t.dueDate && <span>·</span>}
+                          <span>
+                            Completed{t.completedAt ? ` ${formatCompletedDate(t.completedAt)}` : ""}
+                            {t.completedBy && userById.get(t.completedBy)
+                              ? ` by ${userById.get(t.completedBy)}`
+                              : ""}
+                          </span>
+                        </>
+                      )}
+                    </div>
                   </div>
                   <span className="flex shrink-0 items-center gap-1 text-[12px] font-medium text-[var(--text-muted)]">
                     <RotateCcw className="size-3.5" />

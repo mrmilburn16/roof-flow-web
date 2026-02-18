@@ -8,7 +8,17 @@ export type PermissionCode =
   | "edit_scorecard"
   | "edit_todos"
   | "edit_issues"
-  | "view_meetings";
+  | "view_meetings"
+  | "view_feedback";
+
+export type FeedbackItem = {
+  id: string;
+  userId: string;
+  userName: string;
+  page: string;
+  message: string;
+  createdAt: string; // ISO
+};
 
 export type Role = {
   id: string;
@@ -50,6 +60,8 @@ export type TodoItem = {
   status: TodoStatus;
   notes?: string;
   createdAt: string; // ISO
+  completedAt?: string; // ISO, set when status becomes "done"
+  completedBy?: string; // userId who marked it done
 };
 
 export type IssueStatus = "open" | "resolved";
@@ -145,12 +157,14 @@ export const PERMISSION_LABELS: Record<PermissionCode, string> = {
   edit_todos: "Edit to-dos",
   edit_issues: "Edit issues",
   view_meetings: "View meetings & agendas",
+  view_feedback: "View user feedback",
 };
 
 export const ALL_PERMISSION_CODES: PermissionCode[] = [
   "cancel_meeting",
   "run_meeting",
   "view_meetings",
+  "view_feedback",
   "manage_roles",
   "manage_team",
   "edit_goals",

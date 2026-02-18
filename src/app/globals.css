@@ -34,7 +34,9 @@
   --input-bg: #ffffff;
   --input-border: #e4e4e7;
   --input-text: #09090b;
-  --input-placeholder: #a1a1aa;
+  --input-placeholder: var(--helper-text);
+  /** Helper text (subtitles, descriptions): use Slate-style muted so it doesn’t look like a computer prompt */
+  --helper-text: #94a3b8;
   --nav-active-bg: #18181b;
   --nav-active-text: #ffffff;
   --nav-hover-bg: #f4f4f5;
@@ -107,6 +109,7 @@
   --text-primary: #1e293b;
   --text-secondary: #64748b;
   --text-muted: #94a3b8;
+  --helper-text: #94a3b8;
   --icon-color: #64748b;
   --icon-opacity: 0.85;
   --border: #dce4f0;
@@ -195,6 +198,7 @@
   --text-primary: #f4f4f5;
   --text-secondary: #b4b4be;
   --text-muted: #888892;
+  --helper-text: #94a3b8;
   --icon-color: var(--text-muted);
   --icon-opacity: 1;
   --border: #2d2d31;
@@ -212,7 +216,7 @@
   --input-bg: #18181b;
   --input-border: #2d2d31;
   --input-text: #f4f4f5;
-  --input-placeholder: #888892;
+  --input-placeholder: var(--helper-text);
   --nav-active-bg: #f4f4f5;
   --nav-active-text: #09090b;
   --nav-hover-bg: #2d2d31;
@@ -394,6 +398,38 @@ input[type="checkbox"]:focus-visible {
   to {
     transform: scaleX(0);
     transform-origin: left;
+  }
+}
+
+/* Todo complete: checkmark pops in */
+@keyframes todo-check-in {
+  from {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.15);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Goal status: subtle checkmark pop when selecting "On track" */
+@keyframes goal-on-track-in {
+  from {
+    transform: scale(0.85);
+    opacity: 0.7;
+  }
+  55% {
+    transform: scale(1.08);
+    opacity: 1;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
   }
 }
 

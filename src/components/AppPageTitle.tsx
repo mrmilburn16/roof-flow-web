@@ -16,6 +16,8 @@ const pathToTitle: Record<string, string> = {
   "/people": "People",
   "/roles": "Roles",
   "/settings": "Settings",
+  "/integrations": "Integrations",
+  "/f/inbox": "Inbox",
 };
 
 export function AppPageTitle() {
