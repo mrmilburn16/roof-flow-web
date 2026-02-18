@@ -47,6 +47,7 @@ export async function POST(request: NextRequest) {
 
   const signature = request.headers.get("x-slack-signature") ?? null;
   if (!SLACK_SIGNING_SECRET || !verifySlackRequest(rawBody, signature, SLACK_SIGNING_SECRET)) {
+    console.info("[Slack events] Rejected: invalid or missing signature (check SLACK_SIGNING_SECRET)");
     return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
   }
 
@@ -58,6 +59,8 @@ export async function POST(request: NextRequest) {
   if (event.type !== "message") {
     return NextResponse.json({ ok: true });
   }
+
+  console.info("[Slack events] Signature OK, handling message", { channel: event.channel, has_bot_id: !!event.bot_id, thread_ts: event.thread_ts, text_len: (event.text ?? "").length });
 
   if (event.bot_id) {
     console.info("[Slack events] Skip: bot message");
@@ -73,8 +76,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: true });
   }
 
-  const db = getAdminDb();
-  if (!db) {
+  try {
+    const db = getAdminDb();
+    if (!db) {
     console.info("[Slack events] Skip: No Firestore. Set FIREBASE_SERVICE_ACCOUNT_JSON and ensure Firestore is enabled.");
     return NextResponse.json({ ok: true });
   }
@@ -182,4 +186,8 @@ export async function POST(request: NextRequest) {
   }
 
   return NextResponse.json({ ok: true });
+  } catch (err) {
+    console.info("[Slack events] Error while processing message", err);
+    return NextResponse.json({ ok: true });
+  }
 }

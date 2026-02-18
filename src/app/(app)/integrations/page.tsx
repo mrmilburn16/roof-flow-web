@@ -115,6 +115,7 @@ function IntegrationsContent() {
     if (q === "error") setMessage("error");
   }, [searchParams]);
 
+  // When connected, always fetch fresh status and channel list (e.g. after reconnect).
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -130,15 +131,21 @@ function IntegrationsContent() {
           if (cancelled) return;
           const chData = (await chRes.json()) as { channels?: SlackChannel[] };
           setSlackChannels(chData.channels ?? []);
+        } else {
+          setSlackChannels(null);
         }
       } catch {
         if (!cancelled) {
           const fallback = { connected: false, channelId: null, channelName: null };
           setSlackStatus(fallback);
           setCachedSlackStatus(fallback);
+          setSlackChannels(null);
         }
       } finally {
-        if (!cancelled) setSlackLoading(false); setChannelLoading(false);
+        if (!cancelled) {
+          setSlackLoading(false);
+          setChannelLoading(false);
+        }
       }
     })();
     return () => { cancelled = true; };
@@ -282,7 +289,7 @@ function IntegrationsContent() {
           </h2>
         </div>
         <div
-          className="relative overflow-hidden rounded-[var(--radius-xl)] border-2 border-[var(--badge-info-text)]/20 bg-[var(--surface)] px-6 py-6 shadow-[var(--shadow-card)] sm:px-8 sm:py-8"
+          className="relative overflow-visible rounded-[var(--radius-xl)] border-2 border-[var(--badge-info-text)]/20 bg-[var(--surface)] px-6 py-6 shadow-[var(--shadow-card)] sm:px-8 sm:py-8"
           style={{
             boxShadow: "var(--shadow-card), 0 0 0 1px var(--badge-info-text) inset",
           }}

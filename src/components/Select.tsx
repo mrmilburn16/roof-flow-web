@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useLayoutEffect } from "react";
+import { createPortal } from "react-dom";
 import { ChevronDown, Check } from "lucide-react";
 
 export type SelectOption = { value: string; label: string };
@@ -30,17 +31,45 @@ export function Select({
   disabled = false,
 }: SelectProps) {
   const [open, setOpen] = useState(false);
+  const [dropdownRect, setDropdownRect] = useState<{ top: number; left: number; width: number } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const listRef = useRef<HTMLUListElement>(null);
 
   const selected = options.find((o) => o.value === value);
   const displayLabel = selected?.label ?? placeholder;
 
+  const updatePosition = () => {
+    if (!containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    setDropdownRect({
+      top: rect.bottom + 6,
+      left: rect.left,
+      width: Math.max(rect.width, 280),
+    });
+  };
+
+  useLayoutEffect(() => {
+    if (!open) return;
+    updatePosition();
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    window.addEventListener("scroll", updatePosition, true);
+    window.addEventListener("resize", updatePosition);
+    return () => {
+      window.removeEventListener("scroll", updatePosition, true);
+      window.removeEventListener("resize", updatePosition);
+    };
+  }, [open]);
+
   useEffect(() => {
     if (!open) return;
     function handleClickOutside(e: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
+      const target = e.target as Node;
+      const inContainer = containerRef.current?.contains(target);
+      const inList = listRef.current?.contains(target);
+      if (!inContainer && !inList) setOpen(false);
     }
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
@@ -106,53 +135,63 @@ export function Select({
         />
       </button>
 
-      {open && (
-        <ul
-          role="listbox"
-          aria-label={ariaLabel}
-          tabIndex={-1}
-          onKeyDown={(e) => handleKeyDown(e, "list")}
-          className="absolute left-0 right-0 top-full z-50 mt-1.5 min-h-[8rem] min-w-[280px] max-h-[320px] overflow-auto rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] py-1.5 shadow-[var(--shadow-card)]"
-          style={{ boxShadow: "var(--shadow-card), 0 0 0 1px var(--border)" }}
-        >
-          {options.length === 0 ? (
-            <li className="px-4 py-3 text-[14px] text-[var(--text-muted)]" role="option" aria-disabled>
-              {emptyMessage}
-            </li>
-          ) : (
-            options.map((opt) => {
-              const isSelected = opt.value === value;
-              return (
-                <li
-                  key={opt.value}
-                  role="option"
-                  aria-selected={isSelected}
-                  onClick={() => {
-                    onChange(opt.value);
-                    setOpen(false);
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault();
+      {open &&
+        dropdownRect &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <ul
+            ref={listRef}
+            role="listbox"
+            aria-label={ariaLabel}
+            tabIndex={-1}
+            onKeyDown={(e) => handleKeyDown(e, "list")}
+            className="fixed z-[9999] min-h-[8rem] max-h-[320px] overflow-auto rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] py-1.5 shadow-[var(--shadow-card)]"
+            style={{
+              boxShadow: "var(--shadow-card), 0 0 0 1px var(--border)",
+              top: dropdownRect.top,
+              left: dropdownRect.left,
+              width: dropdownRect.width,
+            }}
+          >
+            {options.length === 0 ? (
+              <li className="px-4 py-3 text-[14px] text-[var(--text-muted)]" role="option" aria-disabled>
+                {emptyMessage}
+              </li>
+            ) : (
+              options.map((opt) => {
+                const isSelected = opt.value === value;
+                return (
+                  <li
+                    key={opt.value}
+                    role="option"
+                    aria-selected={isSelected}
+                    onClick={() => {
                       onChange(opt.value);
                       setOpen(false);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        onChange(opt.value);
+                        setOpen(false);
+                      }
+                    }}
+                    className={
+                      "flex cursor-pointer items-center justify-between gap-2 px-4 py-3 text-[14px] transition " +
+                      (isSelected
+                        ? "bg-[var(--nav-hover-bg)] text-[var(--text-primary)] font-medium"
+                        : "text-[var(--text-secondary)] hover:bg-[var(--nav-hover-bg)] hover:text-[var(--text-primary)]")
                     }
-                  }}
-                  className={
-                    "flex cursor-pointer items-center justify-between gap-2 px-4 py-3 text-[14px] transition " +
-                    (isSelected
-                      ? "bg-[var(--nav-hover-bg)] text-[var(--text-primary)] font-medium"
-                      : "text-[var(--text-secondary)] hover:bg-[var(--nav-hover-bg)] hover:text-[var(--text-primary)]")
-                  }
-                >
-                  <span className="text-[var(--text-primary)]">{opt.label}</span>
-                  {isSelected && <Check className="size-4 shrink-0 text-[var(--badge-info-text)]" aria-hidden />}
-                </li>
-              );
-            })
-          )}
-        </ul>
-      )}
+                  >
+                    <span className="text-[var(--text-primary)]">{opt.label}</span>
+                    {isSelected && <Check className="size-4 shrink-0 text-[var(--badge-info-text)]" aria-hidden />}
+                  </li>
+                );
+              })
+            )}
+          </ul>,
+          document.body
+        )}
     </div>
   );
 }
