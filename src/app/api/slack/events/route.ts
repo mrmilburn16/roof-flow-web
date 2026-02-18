@@ -33,6 +33,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
+  // Log every request so you can confirm in Vercel Logs that Slack is hitting this URL.
+  console.info("[Slack events] Request received", {
+    type: payload.type,
+    event_type: payload.event?.type,
+    channel: payload.event?.channel,
+  });
+
   // Respond to url_verification immediately so Slack can verify the Request URL (no signature check needed for this).
   if (payload.type === "url_verification" && typeof payload.challenge === "string") {
     return NextResponse.json({ challenge: payload.challenge });
