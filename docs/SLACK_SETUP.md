@@ -73,15 +73,29 @@ The `/api/slack/events` route writes new to-dos to Firestore. It uses the Fireba
 
 Ensure the service account can read/write the Firestore collections used by the app (`companies/{companyId}/teams/{teamId}/todos` and `.../config/slack`).
 
-## 4. User flow
+## 4. Slack → to-do flow (what’s wired)
+
+For messages in a Slack channel to become to-dos, **you must pick that channel** in Roof Flow. Only one channel is used; messages in that channel create to-dos, others are ignored.
+
+| Step | Where | What happens |
+|------|--------|----------------|
+| 1 | Roof Flow → Integrations | Click **Connect to Slack** and authorize. |
+| 2 | Roof Flow → Integrations | **Pick the channel** where messages should create to-dos (click one of the #channel buttons, or create a channel). This saves the “to-do channel” for your team. |
+| 3 | Slack | In that channel, add the Roof Flow app (channel → Integrations → Add apps). |
+| 4 | Slack | Post a message (e.g. “Call Brian”). It is sent to our Events API; we create a to-do in Firestore and reply in the thread. |
+| 5 | Roof Flow → To-Dos | The new to-do appears (when the app uses Firestore for data). |
+
+If you don’t pick a channel in step 2, no Slack messages will create to-dos.
+
+## 5. User flow (short)
 
 1. In Roof Flow, go to **Integrations**.
 2. Click **Connect to Slack** and authorize the app in the chosen workspace.
-3. After redirect, pick the channel where messages should create to-dos (or click **Create channel** to add one, e.g. `roof-flow-todos`).
+3. After redirect, **pick the channel** where messages should create to-dos (or click **Create channel** to add one, e.g. `roof-flow-todos`).
 4. In Slack, invite the Roof Flow app to that channel (open the channel → Integrations → Add apps).
 5. Post a message in the channel (e.g. "Call Brian"). It appears as an open to-do in Roof Flow with "From Slack · @yourname" and a "View in Slack" link. The app replies in the thread: "Created to-do: Call Brian."
 
-## 5. Removing the test Slack channel
+## 6. Removing the test Slack channel
 
 To remove the Slack integration or the test channel:
 

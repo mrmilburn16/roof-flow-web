@@ -1,9 +1,9 @@
 "use client";
 
-import { Suspense, useState, useEffect } from "react";
+import { Suspense, useState, useEffect, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { MessageCircle, Building2, LayoutGrid, Cloud, Plug2, Plus, Check } from "lucide-react";
-import { PageTitle, btnPrimary, btnSecondary, inputBase } from "@/components/ui";
+import { PageTitle, btnPrimary, btnSecondary, inputBase, Select } from "@/components/ui";
 
 /** Slack from World Vector Logo; Acculynx, Buildertrend, Microsoft 365 icons disabled for now */
 const LOGOS = {
@@ -80,6 +80,8 @@ function IntegrationsContent() {
   const [creatingChannel, setCreatingChannel] = useState(false);
   const [setChannelLoadingId, setSetChannelLoadingId] = useState<string | null>(null);
   const [message, setMessage] = useState<"connected" | "error" | null>(null);
+  const [playConnectedAnimation, setPlayConnectedAnimation] = useState(false);
+  const connectedAnimatedRef = useRef(false);
 
   useEffect(() => {
     const q = searchParams.get("slack");
@@ -116,6 +118,19 @@ function IntegrationsContent() {
   };
 
   const showAsConnected = Boolean(slackStatus?.connected || message === "connected");
+
+  useEffect(() => {
+    if (typeof window === "undefined" || connectedAnimatedRef.current) return;
+    if (!showAsConnected || message !== "connected") return;
+    if (window.localStorage.getItem("roofflow_slack_connected_animated") === "1") return;
+    connectedAnimatedRef.current = true;
+    setPlayConnectedAnimation(true);
+    const t = setTimeout(() => {
+      window.localStorage.setItem("roofflow_slack_connected_animated", "1");
+      setPlayConnectedAnimation(false);
+    }, 700);
+    return () => clearTimeout(t);
+  }, [showAsConnected, message]);
 
   const selectChannel = async (channelId: string, channelName: string) => {
     setSetChannelLoadingId(channelId);
@@ -215,14 +230,7 @@ function IntegrationsContent() {
               <IntegrationLogo logoUrl={LOGOS.slack} fallbackIcon={MessageCircle} sizeClass="size-8" />
             </div>
             <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-center gap-2">
-                <h3 className="text-[18px] font-semibold text-[var(--text-primary)]">Slack</h3>
-                {showAsConnected && (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-[var(--badge-success-bg)] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-[var(--badge-success-text)]">
-                    <Check className="size-3.5" strokeWidth={2.5} aria-hidden /> Connected
-                  </span>
-                )}
-              </div>
+              <h3 className="text-[18px] font-semibold text-[var(--text-primary)]">Slack</h3>
               <p className="mt-2 text-[14px] leading-relaxed text-[var(--helper-text)]">
                 Post in a channel to create to-dos. We show who added each item and link back to the message.
               </p>
@@ -239,7 +247,11 @@ function IntegrationsContent() {
                 </button>
               )}
               {!slackLoading && showAsConnected && (
-                <div className="mt-4 inline-flex cursor-default items-center gap-2 rounded-[var(--radius)] bg-emerald-500 px-4 py-2.5 font-semibold text-white shadow-sm">
+                <div
+                  className={`mt-4 inline-flex cursor-default items-center gap-2 rounded-[var(--radius)] bg-emerald-500 px-4 py-2.5 font-semibold text-white shadow-sm ${playConnectedAnimation ? "slack-connected-celebrate" : ""}`}
+                  aria-live="polite"
+                  aria-label="Slack connected"
+                >
                   <Check className="size-4" strokeWidth={2.5} aria-hidden />
                   Connected
                 </div>
@@ -260,22 +272,27 @@ function IntegrationsContent() {
                   ) : channelLoading ? (
                     <p className="mt-3 text-[13px] text-[var(--text-muted)]">Loading channels…</p>
                   ) : (
-                    <div className="mt-3 space-y-2">
-                      {(slackChannels ?? []).map((ch) => (
-                        <div key={ch.id} className="flex items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => selectChannel(ch.id, ch.name)}
-                            disabled={setChannelLoadingId !== null}
-                            className={`inline-flex items-center gap-2 rounded-[var(--radius)] border px-3 py-2 text-[14px] ${slackStatus?.channelId === ch.id ? "border-[var(--badge-info-text)] bg-[var(--badge-info-bg)] text-[var(--badge-info-text)]" : "border-[var(--border)] bg-[var(--surface)] text-[var(--text-primary)] hover:border-[var(--text-muted)]"}`}
-                          >
-                            #{ch.name}
-                            {slackStatus?.channelId === ch.id && <Check className="size-4" />}
-                          </button>
-                        </div>
-                      ))}
-                      <div className="flex flex-wrap items-center gap-2 pt-2">
-                        <span className="text-[13px] text-[var(--text-muted)]">Add new channel:</span>
+                    <div className="mt-3 space-y-4">
+                      <div>
+                        <label htmlFor="slack-channel-select" className="block text-[13px] font-medium text-[var(--text-secondary)]">
+                          Select channel
+                        </label>
+                        <Select
+                          id="slack-channel-select"
+                          aria-label="To-do channel"
+                          value={slackStatus?.channelId ?? ""}
+                          onChange={(channelId) => {
+                            const ch = (slackChannels ?? []).find((c) => c.id === channelId);
+                            if (ch) selectChannel(ch.id, ch.name);
+                          }}
+                          options={(slackChannels ?? []).map((ch) => ({ value: ch.id, label: `#${ch.name}` }))}
+                          placeholder="Choose a channel…"
+                          className="mt-1.5 max-w-sm"
+                          disabled={setChannelLoadingId !== null}
+                        />
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2 border-t border-[var(--border)] pt-4">
+                        <span className="text-[13px] text-[var(--text-muted)]">Create a new channel in Slack:</span>
                         <input
                           type="text"
                           value={newChannelName}
