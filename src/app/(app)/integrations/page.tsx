@@ -250,6 +250,11 @@ function IntegrationsContent() {
                   <p className="mt-1 text-[13px] text-[var(--text-muted)]">
                     Messages in the selected channel become to-dos. Invite the Roof Flow app to the channel in Slack if needed.
                   </p>
+                  {!slackStatus?.channelId && !slackLoading && (
+                    <p className="mt-2 rounded-[var(--radius)] border border-[var(--badge-warning-text)]/40 bg-[var(--badge-warning-bg)] px-3 py-2 text-[13px] text-[var(--badge-warning-text)]">
+                      Pick a channel below so messages there become to-dos. Until you pick one, new Slack messages won’t create to-dos.
+                    </p>
+                  )}
                   {slackLoading ? (
                     <p className="mt-3 text-[13px] text-[var(--text-muted)]">Setting up…</p>
                   ) : channelLoading ? (
@@ -262,10 +267,10 @@ function IntegrationsContent() {
                             type="button"
                             onClick={() => selectChannel(ch.id, ch.name)}
                             disabled={setChannelLoadingId !== null}
-                            className={`inline-flex items-center gap-2 rounded-[var(--radius)] border px-3 py-2 text-[14px] ${slackStatus.channelId === ch.id ? "border-[var(--badge-info-text)] bg-[var(--badge-info-bg)] text-[var(--badge-info-text)]" : "border-[var(--border)] bg-[var(--surface)] text-[var(--text-primary)] hover:border-[var(--text-muted)]"}`}
+                            className={`inline-flex items-center gap-2 rounded-[var(--radius)] border px-3 py-2 text-[14px] ${slackStatus?.channelId === ch.id ? "border-[var(--badge-info-text)] bg-[var(--badge-info-bg)] text-[var(--badge-info-text)]" : "border-[var(--border)] bg-[var(--surface)] text-[var(--text-primary)] hover:border-[var(--text-muted)]"}`}
                           >
                             #{ch.name}
-                            {slackStatus.channelId === ch.id && <Check className="size-4" />}
+                            {slackStatus?.channelId === ch.id && <Check className="size-4" />}
                           </button>
                         </div>
                       ))}
