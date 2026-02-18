@@ -289,7 +289,7 @@ function IntegrationsContent() {
                           }}
                           options={(slackChannels ?? []).map((ch) => ({ value: ch.id, label: `#${ch.name}` }))}
                           placeholder="Choose a channel…"
-                          className="mt-1.5 max-w-sm"
+                          className="mt-1.5 w-full min-w-[20rem] max-w-md"
                           disabled={setChannelLoadingId !== null}
                         />
                       </div>

@@ -109,7 +109,7 @@ export function Select({
           aria-label={ariaLabel}
           tabIndex={-1}
           onKeyDown={(e) => handleKeyDown(e, "list")}
-          className="absolute left-0 right-0 top-full z-50 mt-1 max-h-[280px] overflow-auto rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] py-1 shadow-[var(--shadow-card)]"
+          className="absolute left-0 right-0 top-full z-50 mt-1.5 min-h-[8rem] min-w-[280px] max-h-[320px] overflow-auto rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] py-1.5 shadow-[var(--shadow-card)]"
           style={{ boxShadow: "var(--shadow-card), 0 0 0 1px var(--border)" }}
         >
           {options.map((opt) => {
@@ -131,7 +131,7 @@ export function Select({
                   }
                 }}
                 className={
-                  "flex cursor-pointer items-center justify-between gap-2 px-3.5 py-2.5 text-[14px] transition " +
+                  "flex cursor-pointer items-center justify-between gap-2 px-4 py-3 text-[14px] transition " +
                   (isSelected
                     ? "bg-[var(--nav-hover-bg)] text-[var(--text-primary)] font-medium"
                     : "text-[var(--text-secondary)] hover:bg-[var(--nav-hover-bg)] hover:text-[var(--text-primary)]")
