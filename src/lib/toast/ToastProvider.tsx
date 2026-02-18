@@ -109,55 +109,31 @@ function ToastItem({
 }) {
   const isSuccess = toast.type === "success";
   const isError = toast.type === "error";
-
-  const wrapperStyles =
-    isSuccess
-      ? "bg-[var(--badge-success-bg)] border-[var(--badge-success-text)]/25"
-      : isError
-        ? "bg-[var(--badge-warning-bg)] border-[var(--badge-warning-text)]/25"
-        : "bg-[var(--badge-info-bg)] border-[var(--badge-info-text)]/25";
-
-  const iconColor =
-    isSuccess
-      ? "text-[var(--badge-success-text)]"
-      : isError
-        ? "text-[var(--badge-warning-text)]"
-        : "text-[var(--badge-info-text)]";
-
-  const progressColor =
-    isSuccess
-      ? "bg-[var(--badge-success-text)]"
-      : isError
-        ? "bg-[var(--badge-warning-text)]"
-        : "bg-[var(--badge-info-text)]";
-
   const Icon = isSuccess ? CheckCircle2 : isError ? AlertCircle : Info;
 
   return (
     <div
       role="status"
-      className={`toast-item overflow-hidden rounded-[var(--radius-xl)] border shadow-[var(--shadow-toast)] ${wrapperStyles} ${exiting ? "toast-exit" : ""}`}
+      className={`toast-item overflow-hidden ${exiting ? "toast-exit" : ""}`}
       data-toast-type={toast.type}
       style={{ "--toast-duration": `${TOAST_DURATION_MS}ms` } as React.CSSProperties}
     >
-      <div className="flex items-center gap-3 px-4 py-3.5">
-        <Icon className={`size-5 shrink-0 ${iconColor}`} aria-hidden />
-        <span className="min-w-0 flex-1 text-[14px] font-medium text-[var(--text-primary)]">
+      <div className="toast-content flex items-center gap-3 pl-[13px] pr-3 py-3">
+        <Icon className="size-4 shrink-0" data-toast-icon aria-hidden />
+        <span className="min-w-0 flex-1 text-[13px] font-medium tracking-[-0.01em]">
           {toast.message}
         </span>
         <button
           type="button"
           onClick={onDismiss}
-          className="shrink-0 rounded-[var(--radius)] p-2 text-[var(--text-muted)] transition hover:bg-black/5 hover:text-[var(--text-primary)]"
+          data-toast-dismiss
+          className="shrink-0 rounded-md p-1.5 transition focus:outline-none focus:ring-2 focus:ring-white/30"
           aria-label="Dismiss"
         >
-          <X className="size-4" aria-hidden />
+          <X className="size-3.5" aria-hidden />
         </button>
       </div>
-      <div
-        className={`toast-progress-bar h-0.5 ${progressColor} opacity-60`}
-        aria-hidden
-      />
+      <div className="toast-progress-bar w-full" aria-hidden />
     </div>
   );
 }

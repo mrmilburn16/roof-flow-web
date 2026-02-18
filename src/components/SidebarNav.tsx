@@ -35,7 +35,6 @@ const navGroups: NavGroup[] = [
     items: [
       { href: "/", label: "Home", icon: Home },
       { href: "/vision", label: "Vision", icon: Compass },
-      { href: "/profile", label: "Profile", icon: UserCircle },
     ],
   },
   {
@@ -58,6 +57,7 @@ const navGroups: NavGroup[] = [
   {
     label: "Settings",
     items: [
+      { href: "/profile", label: "Profile", icon: UserCircle },
       { href: "/people", label: "People", icon: UserPlus },
       { href: "/roles", label: "Roles", icon: Shield },
       { href: "/settings", label: "Settings", icon: Settings },

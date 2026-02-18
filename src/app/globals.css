@@ -61,14 +61,19 @@
   --muted-bg: #f4f4f5;
   --avatar-grey-bg: #e4e4e7;
   --avatar-grey-text: #52525b;
+  --avatar-grey-gradient: linear-gradient(145deg, #f4f4f5 0%, #d4d4d8 100%);
   --avatar-blue-bg: #3b82f6;
   --avatar-blue-text: #eff6ff;
+  --avatar-blue-gradient: linear-gradient(145deg, #60a5fa 0%, #2563eb 100%);
   --avatar-green-bg: #059669;
   --avatar-green-text: #ecfdf5;
+  --avatar-green-gradient: linear-gradient(145deg, #10b981 0%, #047857 100%);
   --avatar-amber-bg: #d97706;
   --avatar-amber-text: #fffbeb;
+  --avatar-amber-gradient: linear-gradient(145deg, #f59e0b 0%, #b45309 100%);
   --avatar-violet-bg: #7c3aed;
   --avatar-violet-text: #f5f3ff;
+  --avatar-violet-gradient: linear-gradient(145deg, #8b5cf6 0%, #6d28d9 100%);
 }
 
 /* Slate: cooler, more formal. Soft blue accent so it’s not flat. */
@@ -128,14 +133,19 @@
   --muted-bg: #e8eef6;
   --avatar-grey-bg: #94a3b8;
   --avatar-grey-text: #f1f5f9;
+  --avatar-grey-gradient: linear-gradient(145deg, #cbd5e1 0%, #64748b 100%);
   --avatar-blue-bg: #2563eb;
   --avatar-blue-text: #dbeafe;
+  --avatar-blue-gradient: linear-gradient(145deg, #3b82f6 0%, #1d4ed8 100%);
   --avatar-green-bg: #047857;
   --avatar-green-text: #d1fae5;
+  --avatar-green-gradient: linear-gradient(145deg, #059669 0%, #065f46 100%);
   --avatar-amber-bg: #b45309;
   --avatar-amber-text: #fffbeb;
+  --avatar-amber-gradient: linear-gradient(145deg, #d97706 0%, #92400e 100%);
   --avatar-violet-bg: #6d28d9;
   --avatar-violet-text: #ede9fe;
+  --avatar-violet-gradient: linear-gradient(145deg, #7c3aed 0%, #5b21b6 100%);
 }
 
 /* Onyx: deep dark. Slightly softened for readability; professional for evening or low-light use. */
@@ -195,14 +205,19 @@
   --muted-bg: #2d2d31;
   --avatar-grey-bg: #3f3f46;
   --avatar-grey-text: #e4e4e7;
+  --avatar-grey-gradient: linear-gradient(145deg, #52525b 0%, #27272a 100%);
   --avatar-blue-bg: #2563eb;
   --avatar-blue-text: #dbeafe;
+  --avatar-blue-gradient: linear-gradient(145deg, #3b82f6 0%, #1e40af 100%);
   --avatar-green-bg: #059669;
   --avatar-green-text: #d1fae5;
+  --avatar-green-gradient: linear-gradient(145deg, #10b981 0%, #047857 100%);
   --avatar-amber-bg: #d97706;
   --avatar-amber-text: #fef3c7;
+  --avatar-amber-gradient: linear-gradient(145deg, #f59e0b 0%, #b45309 100%);
   --avatar-violet-bg: #7c3aed;
   --avatar-violet-text: #ede9fe;
+  --avatar-violet-gradient: linear-gradient(145deg, #8b5cf6 0%, #6d28d9 100%);
 }
 
 @theme inline {
@@ -294,11 +309,11 @@ input[type="checkbox"]:focus-visible {
   animation: page-fade-in 0.28s ease-out backwards;
 }
 
-/* Toast notifications: elevated, type-aware, with progress */
+/* Toast notifications: neutral surface, accent bar, refined motion */
 @keyframes toast-in {
   from {
     opacity: 0;
-    transform: translateX(100%) scale(0.96);
+    transform: translateX(1rem) scale(0.98);
   }
   to {
     opacity: 1;
@@ -313,7 +328,7 @@ input[type="checkbox"]:focus-visible {
   }
   to {
     opacity: 0;
-    transform: translateX(100%) scale(0.96);
+    transform: translateX(1rem) scale(0.98);
   }
 }
 
@@ -329,15 +344,76 @@ input[type="checkbox"]:focus-visible {
 }
 
 .toast-item {
-  animation: toast-in 0.35s cubic-bezier(0.21, 1.02, 0.73, 1);
+  background: #374151;
+  border: none;
+  border-radius: 8px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2), 0 2px 8px rgba(0, 0, 0, 0.12);
+  animation: toast-in 0.32s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.toast-item .toast-content {
+  color: #f3f4f6;
+}
+
+.toast-item [data-toast-icon] {
+  color: inherit;
+}
+
+.toast-item[data-toast-type="success"] [data-toast-icon] {
+  color: #34d399;
+}
+
+.toast-item[data-toast-type="error"] [data-toast-icon] {
+  color: #fbbf24;
+}
+
+.toast-item[data-toast-type="info"] [data-toast-icon] {
+  color: #60a5fa;
+}
+
+.toast-item [data-toast-dismiss] {
+  color: #9ca3af;
+}
+
+.toast-item [data-toast-dismiss]:hover {
+  color: #f3f4f6;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.toast-item[data-toast-type="success"] {
+  border-left: 3px solid #34d399;
+}
+
+.toast-item[data-toast-type="error"] {
+  border-left: 3px solid #fbbf24;
+}
+
+.toast-item[data-toast-type="info"] {
+  border-left: 3px solid #60a5fa;
 }
 
 .toast-item.toast-exit {
-  animation: toast-out 0.25s ease-in forwards;
+  animation: toast-out 0.22s cubic-bezier(0.4, 0, 1, 1) forwards;
 }
 
 .toast-progress-bar {
+  height: 2px;
   animation: toast-progress var(--toast-duration, 7s) linear forwards;
+}
+
+.toast-item[data-toast-type="success"] .toast-progress-bar {
+  background: #34d399;
+  opacity: 0.5;
+}
+
+.toast-item[data-toast-type="error"] .toast-progress-bar {
+  background: #fbbf24;
+  opacity: 0.5;
+}
+
+.toast-item[data-toast-type="info"] .toast-progress-bar {
+  background: #60a5fa;
+  opacity: 0.5;
 }
 
 /* Quick stats chips: solid, premium fills (Apple-esque) */

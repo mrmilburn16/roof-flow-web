@@ -151,25 +151,24 @@ export default function ProfilePage() {
 
                   <div>
                     <div className="text-[13px] font-medium text-[var(--text-secondary)]">Color</div>
-                    <div className="mt-2 flex flex-wrap gap-2">
+                    <div className="mt-2 flex flex-nowrap gap-5">
                       {AVATAR_COLORS.map((c) => (
-                        <button
-                          key={c}
-                          type="button"
-                          onClick={() => setAvatarColor(c)}
-                          title={c}
-                          className={`size-9 rounded-full transition ${
-                            avatarColor === c ? "ring-2 ring-[var(--ring)] ring-offset-2 ring-offset-[var(--surface)]" : ""
-                          }`}
-                          style={{ backgroundColor: `var(--avatar-${c}-bg)` }}
-                          aria-label={`Color ${c}`}
-                          aria-pressed={avatarColor === c}
-                        />
+                        <div key={c} className="flex flex-col items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setAvatarColor(c)}
+                            title={c}
+                            className={`size-10 rounded-full transition shrink-0 ${
+                              avatarColor === c ? "ring-2 ring-[var(--ring)] ring-offset-2 ring-offset-[var(--surface)]" : ""
+                            }`}
+                            style={{ background: `var(--avatar-${c}-gradient)` }}
+                            aria-label={`Color ${c}`}
+                            aria-pressed={avatarColor === c}
+                          />
+                          <span className="text-[12px] capitalize text-[var(--text-muted)]">{c}</span>
+                        </div>
                       ))}
                     </div>
-                    <p className="mt-1.5 text-[12px] text-[var(--text-muted)]">
-                      Grey · Blue · Green · Amber · Violet
-                    </p>
                   </div>
                 </>
               )}

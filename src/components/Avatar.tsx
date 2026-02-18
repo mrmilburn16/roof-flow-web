@@ -32,13 +32,13 @@ export function Avatar({ user, size = "md", className = "" }: AvatarProps) {
     );
   }
 
-  const bgVar = `var(--avatar-${color}-bg)`;
+  const bgGradient = `var(--avatar-${color}-gradient, var(--avatar-${color}-bg))`;
   const textVar = `var(--avatar-${color}-text)`;
 
   return (
     <div
       className={`flex shrink-0 items-center justify-center rounded-full font-semibold ${sizeCls} ${className}`}
-      style={{ backgroundColor: bgVar, color: textVar }}
+      style={{ background: bgGradient, color: textVar }}
       aria-hidden
     >
       {style === "icon" ? (
