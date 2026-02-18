@@ -7,6 +7,8 @@ import { PageTitle, card, btnPrimary, btnSecondary } from "@/components/ui";
 
 const sectionLabels: Record<string, string> = {
   segue: "Check-in",
+  headlines: "Headlines",
+  rockReview: "Rock Review",
   scorecard: "Scorecard",
   goals: "Quarterly Goals",
   todos: "To-Dos",
@@ -16,6 +18,8 @@ const sectionLabels: Record<string, string> = {
 
 const sectionDescriptions: Record<string, string> = {
   segue: "Quick personal and professional updates. Keep it brief.",
+  headlines: "Quick wins and updates from each person (about 90 seconds each).",
+  rockReview: "Review quarterly Rocks and on/off track status.",
   scorecard: "Review KPIs and weekly numbers.",
   goals: "Review 90-day goals and on/off track status.",
   todos: "Review and assign to-dos.",
@@ -88,7 +92,7 @@ export default function AgendasPage() {
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="rounded-md bg-[var(--muted-bg)] px-2.5 py-1 text-[12px] font-medium text-[var(--text-secondary)]">
-                        {total} min total
+                        {total} {total === 1 ? "min" : "mins"} total
                       </span>
                       {canEdit && (
                         <Link
@@ -116,7 +120,7 @@ export default function AgendasPage() {
                         </div>
                         <span className="flex shrink-0 items-center gap-1.5 text-[12px] text-[var(--text-muted)]">
                           <Clock className="size-3.5" />
-                          {s.durationMinutes} min
+                          {s.durationMinutes === 1 ? "1 min" : `${s.durationMinutes} mins`}
                         </span>
                       </div>
                     </li>

@@ -89,7 +89,7 @@ export default function IntegrationsPage() {
             Connect your stack
           </h1>
           <p className="mt-3 max-w-xl text-[16px] leading-relaxed text-[var(--helper-text)]">
-            RoofFlow will plug into the tools you already use.
+            Roof Flow will plug into the tools you already use.
             <br />
             First up: Slack.
             <br />

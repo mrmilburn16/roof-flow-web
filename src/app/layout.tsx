@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "RoofFlow",
+  title: "Roof Flow",
   description: "Run weekly execution with clarity.",
 };
 

@@ -41,6 +41,8 @@ function priorityStyle(priority: number): string {
 
 const sectionLabels: Record<MeetingSectionKind, string> = {
   segue: "Check-in",
+  headlines: "Headlines",
+  rockReview: "Rock Review",
   scorecard: "Scorecard",
   goals: "Quarterly Goals",
   todos: "To-Dos",
@@ -246,7 +248,7 @@ export default function MeetingRunPage() {
                           : "text-[12px] opacity-80"
                       }
                     >
-                      {mins} min
+                      {mins === 1 ? "1 min" : `${mins} mins`}
                     </span>
                   )}
                 </button>
@@ -267,6 +269,67 @@ export default function MeetingRunPage() {
               <p className="text-[14px] leading-relaxed text-[var(--text-secondary)]">
                 Quick personal and professional updates. Keep it brief.
               </p>
+            ) : null}
+
+            {section === "headlines" ? (
+              <p className="text-[14px] leading-relaxed text-[var(--text-secondary)]">
+                Quick wins and updates from each person. About 90 seconds per person. Share a headline, not a full report.
+              </p>
+            ) : null}
+
+            {section === "rockReview" ? (
+              <div className="space-y-4">
+                {db.goals.length === 0 ? (
+                  <p className="text-[14px] text-[var(--text-muted)]">
+                    No Rocks yet. Add quarterly goals on the Goals page to review them here.
+                  </p>
+                ) : db.goals.map((g) => (
+                  <div
+                    key={g.id}
+                    className="rounded-[var(--radius)] border border-[var(--border)] p-4"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="text-[14px] font-medium text-[var(--text-primary)]">
+                          {g.title}
+                        </div>
+                        <div className="mt-1 text-[13px] text-[var(--text-muted)]">
+                          Due {formatDueDate(g.dueDate)}
+                          {userById.get(g.ownerId) && ` · ${userById.get(g.ownerId)}`}
+                        </div>
+                        {g.notes?.trim() && (
+                          <p className="mt-2 text-[13px] leading-snug text-[var(--text-secondary)]">
+                            {g.notes}
+                          </p>
+                        )}
+                      </div>
+                      <StatusBadge
+                        status={
+                          g.status === "onTrack"
+                            ? "success"
+                            : g.status === "offTrack"
+                              ? "warning"
+                              : "done"
+                        }
+                        label={
+                          g.status === "onTrack"
+                            ? "On track"
+                            : g.status === "offTrack"
+                              ? "Off track"
+                              : "Done"
+                        }
+                      />
+                    </div>
+                    <div className="mt-4">
+                      <GoalStatusIconPicker
+                        value={g.status}
+                        onChange={(s) => setGoalStatus(g.id, s)}
+                        ariaLabel={`Status for ${g.title}`}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
             ) : null}
 
             {section === "scorecard" ? (

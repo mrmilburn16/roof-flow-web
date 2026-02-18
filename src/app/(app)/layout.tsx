@@ -31,7 +31,7 @@ export default function AppLayout({
               <div className="flex shrink-0 items-start justify-between gap-2 px-5 py-4">
                 <div>
                   <div className="text-[15px] font-semibold tracking-[-0.02em] text-[var(--text-primary)]">
-                    RoofFlow
+                    Roof Flow
                   </div>
                   <div className="mt-0.5 text-[13px] text-[var(--text-muted)]">
                     Leadership Team

@@ -3,13 +3,13 @@
 /* Dawn: warm neutral light (current default). Clean, approachable, professional. */
 :root,
 [data-theme="dawn"] {
-  --background: #f5f5f5;
+  --background: #fafafa;
   --foreground: #09090b;
   --surface: #ffffff;
   --surface-border: #e4e4e7;
   /* App chrome layering (defaults: solid background, neutral sidebar) */
-  --app-bg-top: var(--background);
-  --app-bg-bottom: var(--background);
+  --app-bg-top: #fafafa;
+  --app-bg-bottom: #f5f5f5;
   --sidebar-bg: var(--surface);
   --sidebar-border: transparent;
   --panel-divider: rgba(0, 0, 0, 0.06);
@@ -95,13 +95,13 @@
 
 /* Slate: cooler, more formal. Soft blue accent so it’s not flat. */
 [data-theme="slate"] {
-  --background: #e5eaf3;
+  --background: #f2f4f8;
   --foreground: #0f172a;
   --surface: #ffffff;
   --surface-border: #dce4f0;
   /* App chrome: content area slightly darker than cards for contrast */
-  --app-bg-top: #eef1f8;
-  --app-bg-bottom: #e5eaf2;
+  --app-bg-top: #f5f7fa;
+  --app-bg-bottom: #eef1f6;
   --sidebar-bg: #ffffff;
   --sidebar-border: #e6ebf2;
   --panel-divider: #e6ebf2;
@@ -184,13 +184,13 @@
 
 /* Onyx: deep dark. Slightly softened for readability; professional for evening or low-light use. */
 [data-theme="onyx"] {
-  --background: #0c0c0e;
+  --background: #0f0f11;
   --foreground: #fafafa;
   --surface: #18181b;
   --surface-border: #2d2d31;
   /* App chrome layering (Onyx): keep dark surfaces */
-  --app-bg-top: var(--background);
-  --app-bg-bottom: var(--background);
+  --app-bg-top: #0f0f11;
+  --app-bg-bottom: #121214;
   --sidebar-bg: var(--surface);
   --sidebar-border: transparent;
   --panel-divider: rgba(255, 255, 255, 0.08);

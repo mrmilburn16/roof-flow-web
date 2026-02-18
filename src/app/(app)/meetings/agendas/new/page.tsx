@@ -10,6 +10,8 @@ import { PageTitle, card, btnPrimary, btnSecondary, inputBase } from "@/componen
 
 const SECTION_KINDS: MeetingSectionKind[] = [
   "segue",
+  "headlines",
+  "rockReview",
   "scorecard",
   "goals",
   "todos",
@@ -19,6 +21,8 @@ const SECTION_KINDS: MeetingSectionKind[] = [
 
 const DEFAULT_TITLES: Record<MeetingSectionKind, string> = {
   segue: "Check-in",
+  headlines: "Headlines",
+  rockReview: "Rock Review",
   scorecard: "Scorecard",
   goals: "Quarterly Goals",
   todos: "To-Dos",
@@ -28,6 +32,8 @@ const DEFAULT_TITLES: Record<MeetingSectionKind, string> = {
 
 const DEFAULT_DURATIONS: Record<MeetingSectionKind, number> = {
   segue: 10,
+  headlines: 5,
+  rockReview: 15,
   scorecard: 10,
   goals: 10,
   todos: 10,

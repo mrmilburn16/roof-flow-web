@@ -107,6 +107,8 @@ export type KpiEntry = {
 
 export type MeetingSectionKind =
   | "segue"
+  | "headlines"
+  | "rockReview"
   | "scorecard"
   | "goals"
   | "todos"

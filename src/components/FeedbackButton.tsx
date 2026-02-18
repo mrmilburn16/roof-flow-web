@@ -1,6 +1,6 @@
 "use client";
 
-import { Sparkles } from "lucide-react";
+import { MessageCircle } from "lucide-react";
 import { useFeedbackOpen } from "@/components/FeedbackProvider";
 
 export function FeedbackButton() {
@@ -12,8 +12,8 @@ export function FeedbackButton() {
       onClick={open}
       className="flex w-full items-center gap-3 rounded-[var(--radius)] px-3 py-2 text-[14px] font-medium text-[var(--text-secondary)] transition hover:bg-[var(--nav-hover-bg)] hover:text-[var(--text-primary)]"
     >
-      <Sparkles className="size-[18px] shrink-0 opacity-[var(--icon-opacity)]" />
-      Share feedback
+      <MessageCircle className="size-[18px] shrink-0 opacity-[var(--icon-opacity)]" />
+      Give feedback
     </button>
   );
 }

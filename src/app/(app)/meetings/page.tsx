@@ -84,6 +84,8 @@ function getScheduleDisplay(template: MeetingTemplate | undefined, weekOf: strin
 
 const sectionLabels: Record<MeetingSectionKind, string> = {
   segue: "Check-in",
+  headlines: "Headlines",
+  rockReview: "Rock Review",
   scorecard: "Scorecard",
   goals: "Quarterly Goals",
   todos: "To-Dos",
@@ -332,7 +334,9 @@ export default function MeetingsPage() {
                       <span className="rounded-full bg-[var(--muted-bg)] px-2 py-0.5 text-[11px] font-medium text-[var(--text-secondary)]">
                         {scheduleDisplay.label}
                       </span>
-                      {totalMinutes > 0 && <span>{totalMinutes} min</span>}
+                      {totalMinutes > 0 && (
+                      <span>{totalMinutes === 1 ? "1 min" : `${totalMinutes} mins`}</span>
+                    )}
                       {agendaPreview.total > 0 && <span>{agendaPreview.total} sections</span>}
                       {meetingRatingAvg != null && (
                         <span>Avg. rating <span className="font-medium text-[var(--text-primary)]">{meetingRatingAvg}</span>/10</span>
@@ -773,7 +777,9 @@ export default function MeetingsPage() {
                       </span>
                       <div className="flex items-center gap-2">
                         {mins > 0 && (
-                          <span className="text-[12px] text-[var(--text-muted)]">{mins} min</span>
+                          <span className="text-[12px] text-[var(--text-muted)]">
+                            {mins === 1 ? "1 min" : `${mins} mins`}
+                          </span>
                         )}
                         <Link
                           href="/meetings/agendas"

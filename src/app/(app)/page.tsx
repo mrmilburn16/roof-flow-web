@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useMemo } from "react";
-import { Calendar, CheckSquare, Target, AlertCircle, Play, TrendingUp } from "lucide-react";
+import { Calendar, CheckSquare, Target, AlertCircle, Play, TrendingUp, Clock } from "lucide-react";
 import { useMockDb } from "@/lib/mock/MockDbProvider";
 import { HomeQuickStats } from "@/components/HomeQuickStats";
 import { PageTitle, card, cardHeader, cardValue, btnPrimary, btnSecondary } from "@/components/ui";
@@ -12,7 +12,7 @@ function formatWeek(weekOf: string) {
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
-/** Next meeting: Tuesday of the week. */
+/** Next meeting: Tuesday of the week (short date). */
 function formatMeetingDate(weekOf: string) {
   const monday = new Date(weekOf + "T12:00:00");
   const tuesday = new Date(monday);
@@ -22,6 +22,20 @@ function formatMeetingDate(weekOf: string) {
   const dd = String(tuesday.getDate()).padStart(2, "0");
   const yyyy = tuesday.getFullYear();
   return `${weekday}, ${mm}/${dd}/${yyyy}`;
+}
+
+/** Tuesday of the week at given 24h time, e.g. "Tuesday at 9:00 AM". */
+function formatMeetingDateAndTime(weekOf: string, time24 = "09:00") {
+  const monday = new Date(weekOf + "T12:00:00");
+  const tuesday = new Date(monday);
+  tuesday.setDate(tuesday.getDate() + 1);
+  const [h, m] = time24.split(":").map(Number);
+  const hours = Number.isFinite(h) ? h : 9;
+  const minutes = Number.isFinite(m) ? m : 0;
+  tuesday.setHours(hours, minutes, 0, 0);
+  const weekday = tuesday.toLocaleDateString("en-US", { weekday: "long" });
+  const timeStr = tuesday.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
+  return `${weekday} at ${timeStr}`;
 }
 
 export default function HomePage() {
@@ -38,6 +52,12 @@ export default function HomePage() {
       return entry != null && entry.value >= k.goal;
     }).length;
     const kpisTotal = db.kpis.length;
+    const scheduleTime = template?.schedule && "time" in template.schedule ? template.schedule.time : "09:00";
+    const totalMinutes = template?.sections?.reduce((sum, s) => sum + s.durationMinutes, 0) ?? 0;
+    const recurrenceLabel =
+      template?.schedule && "frequency" in template.schedule && template.schedule.frequency === "biweekly"
+        ? "Every 2 weeks"
+        : "Weekly";
     return {
       openTodosCount: openTodos.length,
       offTrackGoalsCount: offTrackGoals.length,
@@ -47,6 +67,9 @@ export default function HomePage() {
       weekFormatted: formatWeek(weekOf),
       scorecardOnTrack: kpisOnTrack,
       scorecardTotal: kpisTotal,
+      nextMeetingDateTime: formatMeetingDateAndTime(weekOf, scheduleTime),
+      recurrenceLabel,
+      meetingDurationMinutes: totalMinutes,
     };
   }, [db, weekOf]);
 
@@ -54,6 +77,9 @@ export default function HomePage() {
     header: "Next meeting",
     value: stats.meetingTitle,
     sub: formatMeetingDate(stats.weekOf),
+    dateTime: stats.nextMeetingDateTime,
+    recurrenceLabel: stats.recurrenceLabel,
+    durationMinutes: stats.meetingDurationMinutes,
     icon: Calendar,
     href: "/meetings/run",
     label: "Run meeting",
@@ -62,7 +88,7 @@ export default function HomePage() {
   const otherCards = [
     {
       header: "Open to-dos",
-      value: `${stats.openTodosCount} open`,
+      value: String(stats.openTodosCount),
       sub: null,
       icon: CheckSquare,
       href: "/todos",
@@ -78,7 +104,7 @@ export default function HomePage() {
     },
     {
       header: "Open issues",
-      value: `${stats.openIssuesCount} to discuss`,
+      value: String(stats.openIssuesCount),
       sub: null,
       icon: AlertCircle,
       href: "/issues",
@@ -117,9 +143,22 @@ export default function HomePage() {
             <div className="min-w-0 flex-1">
               <div className={cardHeader}>{nextMeetingCard.header}</div>
               <div className={`${cardValue} mt-2`}>{nextMeetingCard.value}</div>
-              {nextMeetingCard.sub && (
-                <div className="mt-1 text-[13px] text-[var(--text-muted)]">{nextMeetingCard.sub}</div>
-              )}
+              <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-[var(--text-muted)]">
+                <span className="flex items-center gap-1.5">
+                  <Clock className="size-3.5 shrink-0" aria-hidden />
+                  {nextMeetingCard.dateTime}
+                </span>
+                <span className="rounded-full bg-[var(--muted-bg)] px-2 py-0.5 text-[11px] font-medium text-[var(--text-secondary)]">
+                  {nextMeetingCard.recurrenceLabel}
+                </span>
+                {nextMeetingCard.durationMinutes > 0 && (
+                  <span>
+                    {nextMeetingCard.durationMinutes === 1
+                      ? "1 min"
+                      : `${nextMeetingCard.durationMinutes} mins`}
+                  </span>
+                )}
+              </div>
               {meetingRatingAvg != null && (
                 <div className="mt-1 text-[13px] text-[var(--text-muted)]">
                   Avg. meeting rating <span className="font-medium text-[var(--text-primary)]">{meetingRatingAvg}</span>/10

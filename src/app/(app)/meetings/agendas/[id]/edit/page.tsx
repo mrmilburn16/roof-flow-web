@@ -3,7 +3,7 @@
 import { use, useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ChevronUp, ChevronDown, Plus, Trash2 } from "lucide-react";
+import { ChevronUp, ChevronDown, Plus, Trash2, GripVertical } from "lucide-react";
 import type { MeetingSection, MeetingSectionKind } from "@/lib/domain";
 import { useMockDb } from "@/lib/mock/MockDbProvider";
 import { useToast } from "@/lib/toast/ToastProvider";
@@ -11,6 +11,8 @@ import { PageTitle, card, btnPrimary, btnSecondary, inputBase, Select } from "@/
 
 const SECTION_KINDS: MeetingSectionKind[] = [
   "segue",
+  "headlines",
+  "rockReview",
   "scorecard",
   "goals",
   "todos",
@@ -20,6 +22,8 @@ const SECTION_KINDS: MeetingSectionKind[] = [
 
 const KIND_LABELS: Record<MeetingSectionKind, string> = {
   segue: "Check-in",
+  headlines: "Headlines",
+  rockReview: "Rock Review",
   scorecard: "Scorecard",
   goals: "Quarterly Goals",
   todos: "To-Dos",
@@ -32,7 +36,16 @@ function newSection(kind: MeetingSectionKind = "segue"): MeetingSection {
     id: `ms_${crypto.randomUUID().slice(0, 8)}`,
     kind,
     title: KIND_LABELS[kind],
-    durationMinutes: kind === "issues" ? 45 : kind === "conclude" ? 5 : 10,
+    durationMinutes:
+      kind === "issues"
+        ? 45
+        : kind === "conclude"
+          ? 5
+          : kind === "headlines"
+            ? 5
+            : kind === "rockReview"
+              ? 15
+              : 10,
   };
 }
 
@@ -50,6 +63,8 @@ export default function EditAgendaPage({
   const [title, setTitle] = useState("");
   const [sections, setSections] = useState<MeetingSection[]>([]);
   const [saved, setSaved] = useState(false);
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [dropTargetIndex, setDropTargetIndex] = useState<number | null>(null);
 
   const canEdit = hasPermission("manage_team");
 
@@ -80,6 +95,42 @@ export default function EditAgendaPage({
 
   function removeSection(index: number) {
     setSections((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  function handleDragStart(e: React.DragEvent, index: number) {
+    setDraggedIndex(index);
+    e.dataTransfer.setData("text/plain", String(index));
+    e.dataTransfer.effectAllowed = "move";
+    const row = (e.target as HTMLElement).closest("li");
+    if (row) e.dataTransfer.setDragImage(row, 0, 0);
+  }
+
+  function handleDragEnd() {
+    setDraggedIndex(null);
+    setDropTargetIndex(null);
+  }
+
+  function handleDragOver(e: React.DragEvent, index: number) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    if (draggedIndex !== null && draggedIndex !== index) setDropTargetIndex(index);
+  }
+
+  function handleDragLeave() {
+    setDropTargetIndex(null);
+  }
+
+  function handleDrop(e: React.DragEvent, dropIndex: number) {
+    e.preventDefault();
+    setDropTargetIndex(null);
+    const sourceIndex = parseInt(e.dataTransfer.getData("text/plain"), 10);
+    if (Number.isNaN(sourceIndex) || sourceIndex === dropIndex) return;
+    const item = sections[sourceIndex];
+    const rest = sections.filter((_, i) => i !== sourceIndex);
+    const insertIdx = sourceIndex < dropIndex ? dropIndex - 1 : dropIndex;
+    rest.splice(insertIdx, 0, item);
+    setSections(rest);
+    setDraggedIndex(null);
   }
 
   function handleSave() {
@@ -166,7 +217,7 @@ export default function EditAgendaPage({
         </div>
         <div className="border-b border-[var(--border)] px-5 py-3 flex items-center justify-between">
           <span className="text-[13px] text-[var(--text-muted)]">
-            {sections.length} section{sections.length !== 1 ? "s" : ""} · {totalMinutes} min total
+            {sections.length} section{sections.length !== 1 ? "s" : ""} · {totalMinutes} {totalMinutes === 1 ? "min" : "mins"} total
           </span>
           <button
             type="button"
@@ -179,8 +230,31 @@ export default function EditAgendaPage({
         </div>
         <ul className="divide-y divide-[var(--border)]">
           {sections.map((s, i) => (
-            <li key={s.id} className="flex flex-wrap items-center gap-3 px-5 py-4">
+            <li
+              key={s.id}
+              draggable={false}
+              onDragOver={(e) => handleDragOver(e, i)}
+              onDragLeave={handleDragLeave}
+              onDrop={(e) => handleDrop(e, i)}
+              className={`flex flex-wrap items-center gap-3 px-5 py-4 transition-colors ${
+                dropTargetIndex === i ? "bg-[var(--badge-info-bg)]" : ""
+              } ${draggedIndex === i ? "opacity-50" : ""}`}
+            >
               <div className="flex items-center gap-1">
+                <div
+                  draggable
+                  onDragStart={(e) => handleDragStart(e, i)}
+                  onDragEnd={handleDragEnd}
+                  className="cursor-grab touch-none rounded-[var(--radius)] p-1.5 text-[var(--text-muted)] hover:bg-[var(--nav-hover-bg)] hover:text-[var(--text-primary)] active:cursor-grabbing"
+                  role="button"
+                  tabIndex={0}
+                  aria-label="Drag to reorder"
+                  onKeyDown={(e) => {
+                    if (e.key === " " || e.key === "Enter") e.preventDefault();
+                  }}
+                >
+                  <GripVertical className="size-4" aria-hidden />
+                </div>
                 <button
                   type="button"
                   onClick={() => moveSection(i, -1)}
@@ -223,7 +297,7 @@ export default function EditAgendaPage({
                   onChange={(e) => updateSection(i, { durationMinutes: Math.max(1, parseInt(e.target.value, 10) || 1) })}
                   className={inputBase + " w-20"}
                 />
-                <span className="text-[13px] text-[var(--text-muted)]">min</span>
+                <span className="text-[13px] text-[var(--text-muted)]">{s.durationMinutes === 1 ? "min" : "mins"}</span>
               </div>
               <button
                 type="button"

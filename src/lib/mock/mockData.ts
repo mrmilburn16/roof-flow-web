@@ -207,11 +207,13 @@ export function createInitialMockDb(): MockDb {
       createdAt: iso(now),
       sections: [
         { id: "ms_1", kind: "segue", title: "Check-in", durationMinutes: 10 },
-        { id: "ms_2", kind: "scorecard", title: "Scorecard", durationMinutes: 10 },
-        { id: "ms_3", kind: "goals", title: "Quarterly Goals", durationMinutes: 10 },
-        { id: "ms_4", kind: "todos", title: "To-Dos", durationMinutes: 10 },
-        { id: "ms_5", kind: "issues", title: "Issues", durationMinutes: 45 },
-        { id: "ms_6", kind: "conclude", title: "Conclude", durationMinutes: 5 },
+        { id: "ms_2", kind: "headlines", title: "Headlines", durationMinutes: 5 },
+        { id: "ms_3", kind: "rockReview", title: "Rock Review", durationMinutes: 15 },
+        { id: "ms_4", kind: "scorecard", title: "Scorecard", durationMinutes: 10 },
+        { id: "ms_5", kind: "goals", title: "Quarterly Goals", durationMinutes: 10 },
+        { id: "ms_6", kind: "todos", title: "To-Dos", durationMinutes: 10 },
+        { id: "ms_7", kind: "issues", title: "Issues", durationMinutes: 45 },
+        { id: "ms_8", kind: "conclude", title: "Conclude", durationMinutes: 5 },
       ],
     },
   ];

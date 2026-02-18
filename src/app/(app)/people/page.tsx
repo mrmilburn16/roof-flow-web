@@ -83,7 +83,7 @@ export default function PeoplePage() {
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <PageTitle subtitle="Add team members and assign them to roles. Changes appear on the Accountability Chart." />
         <button
           type="button"

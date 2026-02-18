@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { collection, doc, setDoc } from "firebase/firestore";
-import { Settings, Palette, Database, Zap, Shield } from "lucide-react";
+import { Settings, Palette, Database, Zap, Shield, User, Users, Layout } from "lucide-react";
 import { createInitialMockDb, startOfWeek } from "@/lib/mock/mockData";
 import { getFirebaseDb, isFirebaseConfigured } from "@/lib/firebase/client";
 import { useAuth } from "@/lib/auth/AuthProvider";
@@ -11,7 +12,16 @@ import { useTheme } from "@/lib/theme/ThemeProvider";
 import { THEMES } from "@/lib/theme/ThemeProvider";
 import { PageTitle, card, btnPrimary, StatusBadge, inputBase, Select } from "@/components/ui";
 
+const THEME_OPTIONS_USER = [
+  { value: "dawn", label: "Dawn — Warm and light", description: "Soft, approachable. Best for daytime use." },
+  { value: "slate", label: "Slate — Cool and professional", description: "Clean and formal. A subtle blue tone." },
+  { value: "onyx", label: "Onyx — Dark mode", description: "Easy on the eyes. Ideal for low light." },
+];
+
 export default function SettingsPage() {
+  const searchParams = useSearchParams();
+  const isV2 = searchParams?.get("v") === "2";
+
   const firestore = getFirebaseDb();
   const configured = isFirebaseConfigured();
   const companyId = process.env.NEXT_PUBLIC_COMPANY_ID || "c_roofco";
@@ -127,9 +137,110 @@ export default function SettingsPage() {
     }
   }
 
+  if (isV2) {
+    return (
+      <div className="space-y-10">
+        <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h1 className="text-[26px] font-semibold tracking-tight text-[var(--text-primary)]">
+              Settings
+            </h1>
+            <p className="mt-2 max-w-xl text-[15px] leading-relaxed text-[var(--helper-text)]">
+              Customize how Roof Flow looks and works for you. Changes apply right away.
+            </p>
+          </div>
+          <Link
+            href="/settings"
+            className="inline-flex items-center gap-2 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] px-4 py-2.5 text-[13px] font-medium text-[var(--text-secondary)] hover:bg-[var(--nav-hover-bg)] hover:text-[var(--text-primary)]"
+          >
+            Developer view
+          </Link>
+        </div>
+
+        <section className={card}>
+          <div className="border-b border-[var(--border)] px-6 py-5">
+            <h2 className="flex items-center gap-2.5 text-[15px] font-semibold text-[var(--text-primary)]">
+              <Layout className="size-4 text-[var(--text-muted)]" />
+              Appearance
+            </h2>
+            <p className="mt-1 text-[13px] text-[var(--helper-text)]">
+              Choose a look that fits your workspace. You can also change this from the sidebar.
+            </p>
+          </div>
+          <div className="p-6">
+            <label className="mb-2 block text-[13px] font-medium text-[var(--text-secondary)]">
+              Theme
+            </label>
+            <Select
+              aria-label="Theme"
+              value={theme}
+              onChange={(v) => setTheme(v as "dawn" | "slate" | "onyx")}
+              options={THEME_OPTIONS_USER.map((t) => ({ value: t.value, label: t.label }))}
+              className="max-w-[320px]"
+            />
+            <p className="mt-2 text-[13px] text-[var(--helper-text)]">
+              {THEME_OPTIONS_USER.find((t) => t.value === theme)?.description}
+            </p>
+          </div>
+        </section>
+
+        {authEnabled && user && (
+          <section className={card}>
+            <div className="border-b border-[var(--border)] px-6 py-5">
+              <h2 className="flex items-center gap-2.5 text-[15px] font-semibold text-[var(--text-primary)]">
+                <User className="size-4 text-[var(--text-muted)]" />
+                Account
+              </h2>
+              <p className="mt-1 text-[13px] text-[var(--helper-text)]">
+                You are signed in with this account.
+              </p>
+            </div>
+            <div className="p-6">
+              <div className="rounded-[var(--radius)] border border-[var(--border)] bg-[var(--muted-bg)] px-4 py-3">
+                <span className="text-[13px] text-[var(--text-muted)]">Signed in as</span>
+                <p className="mt-0.5 text-[15px] font-medium text-[var(--text-primary)]">
+                  {user.email ?? "User"}
+                </p>
+              </div>
+            </div>
+          </section>
+        )}
+
+        <section className={card}>
+          <div className="border-b border-[var(--border)] px-6 py-5">
+            <h2 className="flex items-center gap-2.5 text-[15px] font-semibold text-[var(--text-primary)]">
+              <Users className="size-4 text-[var(--text-muted)]" />
+              Team permissions
+            </h2>
+            <p className="mt-1 text-[13px] text-[var(--helper-text)]">
+              Control who can run meetings, edit goals and the scorecard, and manage people.
+            </p>
+          </div>
+          <div className="p-6">
+            <Link
+              href="/roles"
+              className="inline-flex items-center gap-2 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] px-4 py-3 text-[14px] font-medium text-[var(--text-secondary)] hover:border-[var(--text-muted)]/40 hover:bg-[var(--nav-hover-bg)] hover:text-[var(--text-primary)]"
+            >
+              <Shield className="size-4" />
+              Manage roles and permissions
+            </Link>
+          </div>
+        </section>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-8">
-      <PageTitle subtitle="Appearance, data source, and starter data." />
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <PageTitle subtitle="Appearance, data source, and starter data." />
+        <Link
+          href="/settings?v=2"
+          className="inline-flex items-center gap-2 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] px-4 py-2.5 text-[13px] font-medium text-[var(--text-secondary)] hover:bg-[var(--nav-hover-bg)] hover:text-[var(--text-primary)]"
+        >
+          User-friendly view
+        </Link>
+      </div>
 
       <div className="space-y-6">
         {/* App */}

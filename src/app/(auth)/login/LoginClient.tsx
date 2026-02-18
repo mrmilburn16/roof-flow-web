@@ -55,14 +55,14 @@ export function LoginClient() {
     <div className="min-h-dvh bg-[var(--background)]">
       <div className="mx-auto flex max-w-md flex-col gap-8 px-6 py-20">
         <div>
-          <div className="text-[14px] font-semibold text-[var(--text-primary)]">RoofFlow</div>
+          <div className="text-[14px] font-semibold text-[var(--text-primary)]">Roof Flow</div>
           <h1 className="mt-2 text-[22px] font-semibold tracking-[-0.03em] text-[var(--text-primary)]">
             {mode === "signin" ? "Sign in" : "Create account"}
           </h1>
           <p className="mt-1 text-[14px] text-[var(--text-muted)]">
             {enabled
               ? configured
-                ? "Use your team email to access RoofFlow."
+                ? "Use your team email to access Roof Flow."
                 : "Firebase isn’t configured yet. Add env keys, then enable auth."
               : "Auth is disabled (mock mode). Set NEXT_PUBLIC_USE_FIREBASE_AUTH=true to require login."}
           </p>
