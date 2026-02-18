@@ -10,6 +10,8 @@ type SelectProps = {
   onChange: (value: string) => void;
   options: SelectOption[];
   placeholder?: string;
+  /** Shown inside the dropdown when options are empty */
+  emptyMessage?: string;
   id?: string;
   "aria-label"?: string;
   className?: string;
@@ -21,6 +23,7 @@ export function Select({
   onChange,
   options,
   placeholder = "Select…",
+  emptyMessage = "No options",
   id,
   "aria-label": ariaLabel,
   className = "",
@@ -112,36 +115,42 @@ export function Select({
           className="absolute left-0 right-0 top-full z-50 mt-1.5 min-h-[8rem] min-w-[280px] max-h-[320px] overflow-auto rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] py-1.5 shadow-[var(--shadow-card)]"
           style={{ boxShadow: "var(--shadow-card), 0 0 0 1px var(--border)" }}
         >
-          {options.map((opt) => {
-            const isSelected = opt.value === value;
-            return (
-              <li
-                key={opt.value}
-                role="option"
-                aria-selected={isSelected}
-                onClick={() => {
-                  onChange(opt.value);
-                  setOpen(false);
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
+          {options.length === 0 ? (
+            <li className="px-4 py-3 text-[14px] text-[var(--text-muted)]" role="option" aria-disabled>
+              {emptyMessage}
+            </li>
+          ) : (
+            options.map((opt) => {
+              const isSelected = opt.value === value;
+              return (
+                <li
+                  key={opt.value}
+                  role="option"
+                  aria-selected={isSelected}
+                  onClick={() => {
                     onChange(opt.value);
                     setOpen(false);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      onChange(opt.value);
+                      setOpen(false);
+                    }
+                  }}
+                  className={
+                    "flex cursor-pointer items-center justify-between gap-2 px-4 py-3 text-[14px] transition " +
+                    (isSelected
+                      ? "bg-[var(--nav-hover-bg)] text-[var(--text-primary)] font-medium"
+                      : "text-[var(--text-secondary)] hover:bg-[var(--nav-hover-bg)] hover:text-[var(--text-primary)]")
                   }
-                }}
-                className={
-                  "flex cursor-pointer items-center justify-between gap-2 px-4 py-3 text-[14px] transition " +
-                  (isSelected
-                    ? "bg-[var(--nav-hover-bg)] text-[var(--text-primary)] font-medium"
-                    : "text-[var(--text-secondary)] hover:bg-[var(--nav-hover-bg)] hover:text-[var(--text-primary)]")
-                }
-              >
-                <span>{opt.label}</span>
-                {isSelected && <Check className="size-4 shrink-0 text-[var(--badge-info-text)]" aria-hidden />}
-              </li>
-            );
-          })}
+                >
+                  <span className="text-[var(--text-primary)]">{opt.label}</span>
+                  {isSelected && <Check className="size-4 shrink-0 text-[var(--badge-info-text)]" aria-hidden />}
+                </li>
+              );
+            })
+          )}
         </ul>
       )}
     </div>
