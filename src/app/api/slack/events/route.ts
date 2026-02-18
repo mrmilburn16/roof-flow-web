@@ -59,14 +59,23 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: true });
   }
 
-  if (event.bot_id) return NextResponse.json({ ok: true });
-  if (event.thread_ts && event.thread_ts !== event.ts) return NextResponse.json({ ok: true });
+  if (event.bot_id) {
+    console.info("[Slack events] Skip: bot message");
+    return NextResponse.json({ ok: true });
+  }
+  if (event.thread_ts && event.thread_ts !== event.ts) {
+    console.info("[Slack events] Skip: reply in thread (only top-level messages create to-dos)");
+    return NextResponse.json({ ok: true });
+  }
   const text = (event.text ?? "").trim();
-  if (!text) return NextResponse.json({ ok: true });
+  if (!text) {
+    console.info("[Slack events] Skip: empty message text");
+    return NextResponse.json({ ok: true });
+  }
 
   const db = getAdminDb();
   if (!db) {
-    console.warn("[Slack events] No Firestore (getAdminDb null). Set FIREBASE_SERVICE_ACCOUNT_JSON and ensure Firestore is enabled.");
+    console.info("[Slack events] Skip: No Firestore. Set FIREBASE_SERVICE_ACCOUNT_JSON and ensure Firestore is enabled.");
     return NextResponse.json({ ok: true });
   }
 
@@ -74,22 +83,22 @@ export async function POST(request: NextRequest) {
   const channelId = config?.channelId ?? undefined;
   const token = config?.accessToken;
   if (!token) {
-    console.warn("[Slack events] No Slack token in config. Reconnect Slack in Integrations and pick a channel.");
+    console.info("[Slack events] Skip: No Slack token. Reconnect Slack in Integrations and pick a channel.");
     return NextResponse.json({ ok: true });
   }
   if (!channelId) {
-    console.warn("[Slack events] No to-do channel selected. In Integrations, pick a channel in the dropdown.");
+    console.info("[Slack events] Skip: No to-do channel selected. In Integrations, pick a channel in the dropdown.");
     return NextResponse.json({ ok: true });
   }
   if (event.channel !== channelId) {
-    console.warn("[Slack events] Channel mismatch — message is from channel", event.channel, "but to-do channel is", channelId, "— in Integrations, select the channel where you’re posting.");
+    console.info("[Slack events] Skip: Channel mismatch. Message from", event.channel, "but to-do channel is", channelId, "— select that channel in Integrations.");
     return NextResponse.json({ ok: true });
   }
 
   const channelName = config?.channelName ?? "";
   const slackTeamId = config?.slackTeamId ?? "";
   if (slackTeamId && payload.team_id !== slackTeamId) {
-    console.warn("[Slack events] Team mismatch — event team_id", payload.team_id, "vs config", slackTeamId);
+    console.info("[Slack events] Skip: Team mismatch. Event team_id", payload.team_id, "vs config", slackTeamId);
     return NextResponse.json({ ok: true });
   }
 
