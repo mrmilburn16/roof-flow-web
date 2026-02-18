@@ -31,10 +31,7 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} min-h-dvh antialiased font-sans`}
-        style={{ background: "var(--background)", color: "var(--foreground)" }}
-      >
+      <body className={`${geistSans.variable} ${geistMono.variable} min-h-dvh antialiased font-sans`}>
         {children}
       </body>
     </html>

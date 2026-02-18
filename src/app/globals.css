@@ -7,9 +7,18 @@
   --foreground: #09090b;
   --surface: #ffffff;
   --surface-border: #e4e4e7;
+  /* App chrome layering (defaults: solid background, neutral sidebar) */
+  --app-bg-top: var(--background);
+  --app-bg-bottom: var(--background);
+  --sidebar-bg: var(--surface);
+  --sidebar-border: transparent;
+  --panel-divider: rgba(0, 0, 0, 0.06);
+  --content-bg: var(--surface);
   --text-primary: #09090b;
   --text-secondary: #52525b;
   --text-muted: #a1a1aa;
+  --icon-color: var(--text-secondary);
+  --icon-opacity: 1;
   --border: #e4e4e7;
   --ring: rgba(0, 0, 0, 0.08);
   --btn-primary-bg: #18181b;
@@ -19,6 +28,9 @@
   --btn-secondary-border: #e4e4e7;
   --btn-secondary-text: #52525b;
   --btn-secondary-hover: #f4f4f5;
+  --btn-danger-bg: #dc2626;
+  --btn-danger-text: #ffffff;
+  --btn-danger-hover: #b91c1c;
   --input-bg: #ffffff;
   --input-border: #e4e4e7;
   --input-text: #09090b;
@@ -30,19 +42,22 @@
   --radius-lg: 12px;
   --radius-xl: 16px;
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
-  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.04);
+  --shadow-card: 0 1px 2px rgba(17, 24, 39, 0.04), 0 10px 24px rgba(17, 24, 39, 0.06);
   --shadow-toast: 0 4px 12px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.04);
-  --badge-success-bg: #ecfdf5;
-  --badge-success-text: #047857;
-  --badge-warning-bg: #fffbeb;
-  --badge-warning-text: #b45309;
+  --card-radius: var(--radius-xl);
+  --card-shadow: var(--shadow-card);
+  --badge-success-bg: #d1fae5;
+  --badge-success-text: #065f46;
+  --badge-warning-bg: #ffedd5;
+  --badge-warning-text: #9a3412;
   --badge-info-bg: #eff6ff;
   --badge-info-text: #1d4ed8;
-  --badge-neutral-bg: #f4f4f5;
-  --badge-neutral-text: #52525b;
-  --goal-btn-on-bg: #b8f0d8;
-  --goal-btn-off-bg: #fde68a;
-  --goal-btn-done-bg: #e4e4e7;
+  --badge-neutral-bg: #f1f5f9;
+  --badge-neutral-text: #475569;
+  --goal-btn-on-bg: #a7f3d0;
+  --goal-btn-off-bg: #fed7aa;
+  --goal-btn-done-bg: #dbeafe;
+  --goal-btn-done-text: #1e40af;
   --stat-neutral: #71717a;
   --stat-success: #059669;
   --stat-warning: #c2410c;
@@ -82,9 +97,18 @@
   --foreground: #0f172a;
   --surface: #ffffff;
   --surface-border: #dce4f0;
-  --text-primary: #0f172a;
-  --text-secondary: #475569;
-  --text-muted: #64748b;
+  /* App chrome layering (Slate only): subtle gradient + slightly darker sidebar */
+  --app-bg-top: #f7f9fc;
+  --app-bg-bottom: #eef2f7;
+  --sidebar-bg: #ffffff;
+  --sidebar-border: #e6ebf2;
+  --panel-divider: #e6ebf2;
+  --content-bg: transparent;
+  --text-primary: #1e293b;
+  --text-secondary: #64748b;
+  --text-muted: #94a3b8;
+  --icon-color: #64748b;
+  --icon-opacity: 0.85;
   --border: #dce4f0;
   --ring: rgba(30, 64, 118, 0.2);
   --btn-primary-bg: #0f172a;
@@ -94,27 +118,34 @@
   --btn-secondary-border: #c5d0e2;
   --btn-secondary-text: #475569;
   --btn-secondary-hover: #e8eef6;
+  --btn-danger-bg: #dc2626;
+  --btn-danger-text: #ffffff;
+  --btn-danger-hover: #b91c1c;
   --input-bg: #ffffff;
   --input-border: #dce4f0;
   --input-text: #0f172a;
   --input-placeholder: #94a3b8;
-  --nav-active-bg: #0f172a;
+  --nav-active-bg: linear-gradient(135deg, #1f2a44 0%, #2b3a5d 100%);
   --nav-active-text: #ffffff;
+  --nav-active-shadow: 0 4px 12px rgba(31, 42, 68, 0.35);
   --nav-hover-bg: #e2e8f2;
   --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06);
-  --shadow-card: 0 1px 3px rgba(30, 64, 118, 0.06);
+  --shadow-card: 0 1px 2px rgba(15, 23, 42, 0.05), 0 10px 24px rgba(15, 23, 42, 0.08);
   --shadow-toast: 0 4px 12px rgba(15, 23, 42, 0.1), 0 2px 4px rgba(30, 64, 118, 0.06);
-  --badge-success-bg: #ecfdf5;
-  --badge-success-text: #047857;
-  --badge-warning-bg: #fffbeb;
-  --badge-warning-text: #b45309;
+  --card-radius: 14px;
+  --card-shadow: 0 8px 24px rgba(30, 41, 59, 0.06), 0 2px 6px rgba(30, 41, 59, 0.04);
+  --badge-success-bg: #d1fae5;
+  --badge-success-text: #065f46;
+  --badge-warning-bg: #ffedd5;
+  --badge-warning-text: #9a3412;
   --badge-info-bg: #dbeafe;
   --badge-info-text: #1e40af;
-  --badge-neutral-bg: #e8eef6;
+  --badge-neutral-bg: #f1f5f9;
   --badge-neutral-text: #475569;
   --goal-btn-on-bg: #a7f3d0;
-  --goal-btn-off-bg: #fcd34d;
-  --goal-btn-done-bg: #cbd5e1;
+  --goal-btn-off-bg: #fed7aa;
+  --goal-btn-done-bg: #dbeafe;
+  --goal-btn-done-text: #1e40af;
   --stat-neutral: #64748b;
   --stat-success: #047857;
   --stat-warning: #b45309;
@@ -154,9 +185,18 @@
   --foreground: #fafafa;
   --surface: #18181b;
   --surface-border: #2d2d31;
+  /* App chrome layering (Onyx): keep dark surfaces */
+  --app-bg-top: var(--background);
+  --app-bg-bottom: var(--background);
+  --sidebar-bg: var(--surface);
+  --sidebar-border: transparent;
+  --panel-divider: rgba(255, 255, 255, 0.08);
+  --content-bg: var(--surface);
   --text-primary: #f4f4f5;
   --text-secondary: #b4b4be;
   --text-muted: #888892;
+  --icon-color: var(--text-muted);
+  --icon-opacity: 1;
   --border: #2d2d31;
   --ring: rgba(255, 255, 255, 0.12);
   --btn-primary-bg: #f4f4f5;
@@ -166,6 +206,9 @@
   --btn-secondary-border: #2d2d31;
   --btn-secondary-text: #b4b4be;
   --btn-secondary-hover: #2d2d31;
+  --btn-danger-bg: #dc2626;
+  --btn-danger-text: #ffffff;
+  --btn-danger-hover: #b91c1c;
   --input-bg: #18181b;
   --input-border: #2d2d31;
   --input-text: #f4f4f5;
@@ -176,17 +219,20 @@
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
   --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.2);
   --shadow-toast: 0 8px 24px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.2);
-  --badge-success-bg: rgba(16, 185, 129, 0.2);
-  --badge-success-text: #34d399;
-  --badge-warning-bg: rgba(245, 158, 11, 0.2);
-  --badge-warning-text: #fbbf24;
+  --card-radius: var(--radius-xl);
+  --card-shadow: var(--shadow-card);
+  --badge-success-bg: rgba(16, 185, 129, 0.18);
+  --badge-success-text: #6ee7b7;
+  --badge-warning-bg: rgba(234, 88, 12, 0.2);
+  --badge-warning-text: #fdba74;
   --badge-info-bg: rgba(59, 130, 246, 0.2);
   --badge-info-text: #60a5fa;
-  --badge-neutral-bg: rgba(255, 255, 255, 0.12);
-  --badge-neutral-text: #b4b4be;
-  --goal-btn-on-bg: rgba(16, 185, 129, 0.35);
-  --goal-btn-off-bg: rgba(245, 158, 11, 0.35);
-  --goal-btn-done-bg: rgba(255, 255, 255, 0.18);
+  --badge-neutral-bg: rgba(255, 255, 255, 0.1);
+  --badge-neutral-text: #94a3b8;
+  --goal-btn-on-bg: rgba(16, 185, 129, 0.28);
+  --goal-btn-off-bg: rgba(234, 88, 12, 0.28);
+  --goal-btn-done-bg: rgba(59, 130, 246, 0.28);
+  --goal-btn-done-text: #60a5fa;
   --stat-neutral: #a1a1aa;
   --stat-success: #34d399;
   --stat-warning: #fb923c;
@@ -232,9 +278,17 @@
 }
 
 body {
-  background: var(--background);
+  background: linear-gradient(180deg, var(--app-bg-top) 0%, var(--app-bg-bottom) 100%);
+  background-color: var(--app-bg-bottom);
   color: var(--foreground);
   font-feature-settings: "rlig" 1, "calt" 1;
+}
+
+/* Clickable elements show pointer cursor */
+button,
+[role="button"],
+a[href] {
+  cursor: pointer;
 }
 
 input:focus-visible,

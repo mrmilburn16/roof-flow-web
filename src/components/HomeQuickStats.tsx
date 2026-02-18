@@ -1,6 +1,7 @@
 "use client";
 
 import { CheckSquare, Target, AlertCircle, TrendingUp } from "lucide-react";
+import { card } from "@/components/ui";
 
 export type HomeQuickStatsData = {
   openTodosCount: number;
@@ -28,8 +29,8 @@ export function HomeQuickStats({ stats }: { stats: HomeQuickStatsData }) {
       : "No KPIs";
 
   return (
-    <div className="flex flex-wrap items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] px-4 py-3">
-      <span className="quickstat" data-variant="neutral">
+    <div className={`${card} grid grid-cols-2 gap-4 px-4 py-3 sm:grid-cols-4`}>
+      <span className="quickstat justify-center justify-self-center sm:justify-self-stretch" data-variant="neutral">
         <span className="quickstat-icon" aria-hidden>
           <CheckSquare className={iconCls} />
         </span>
@@ -40,7 +41,7 @@ export function HomeQuickStats({ stats }: { stats: HomeQuickStatsData }) {
       </span>
 
       {stats.offTrackGoalsCount > 0 ? (
-        <span className="quickstat" data-variant="warning">
+        <span className="quickstat justify-center justify-self-center sm:justify-self-stretch" data-variant="warning">
           <span className="quickstat-icon" aria-hidden>
             <Target className={iconCls} />
           </span>
@@ -50,7 +51,7 @@ export function HomeQuickStats({ stats }: { stats: HomeQuickStatsData }) {
           </span>
         </span>
       ) : (
-        <span className="quickstat" data-variant="success">
+        <span className="quickstat justify-center justify-self-center sm:justify-self-stretch" data-variant="success">
           <span className="quickstat-icon" aria-hidden>
             <Target className={iconCls} />
           </span>
@@ -58,7 +59,7 @@ export function HomeQuickStats({ stats }: { stats: HomeQuickStatsData }) {
         </span>
       )}
 
-      <span className="quickstat" data-variant="info">
+      <span className="quickstat justify-center justify-self-center sm:justify-self-stretch" data-variant="info">
         <span className="quickstat-icon" aria-hidden>
           <AlertCircle className={iconCls} />
         </span>
@@ -68,7 +69,7 @@ export function HomeQuickStats({ stats }: { stats: HomeQuickStatsData }) {
         </span>
       </span>
 
-      <span className="quickstat" data-variant={scoreVariant}>
+      <span className="quickstat justify-center justify-self-center sm:justify-self-stretch" data-variant={scoreVariant}>
         <span className="quickstat-icon" aria-hidden>
           <TrendingUp className={iconCls} />
         </span>

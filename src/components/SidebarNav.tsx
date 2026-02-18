@@ -33,7 +33,7 @@ const navGroups: NavGroup[] = [
   {
     label: "Dashboard",
     items: [
-      { href: "/", label: "Home", icon: Home },
+      { href: "/", label: "Overview", icon: Home },
       { href: "/vision", label: "Vision", icon: Compass },
     ],
   },
@@ -65,7 +65,7 @@ const navGroups: NavGroup[] = [
   },
 ];
 
-const iconCls = "size-[18px] shrink-0";
+const iconCls = "size-[18px] shrink-0 text-[var(--icon-color)] opacity-[var(--icon-opacity)]";
 
 export function SidebarNav() {
   const pathname = usePathname();
@@ -79,7 +79,7 @@ export function SidebarNav() {
             className={
               index === 0
                 ? "flex min-h-[88px] flex-col justify-center py-5"
-                : "flex min-h-[88px] flex-col justify-center border-t border-[var(--border)] py-5"
+                : "flex min-h-[88px] flex-col justify-center py-5"
             }
           >
             <div>
@@ -94,14 +94,23 @@ export function SidebarNav() {
                     <Link
                       key={item.href}
                       href={item.href}
+                      style={
+                        active
+                          ? {
+                              background: "var(--nav-active-bg)",
+                              boxShadow: "var(--nav-active-shadow)",
+                              color: "var(--nav-active-text)",
+                            }
+                          : undefined
+                      }
                       className={[
                         "flex items-center gap-3 rounded-[var(--radius)] px-3 py-2 text-[14px] font-medium transition",
                         active
-                          ? "bg-[var(--nav-active-bg)] text-[var(--nav-active-text)]"
+                          ? "text-[var(--nav-active-text)]"
                           : "text-[var(--text-secondary)] hover:bg-[var(--nav-hover-bg)] hover:text-[var(--text-primary)]",
                       ].join(" ")}
                     >
-                      <Icon className={iconCls} />
+                      <Icon className={iconCls + (active ? " text-white opacity-100" : "")} />
                       <span>{item.label}</span>
                     </Link>
                   );

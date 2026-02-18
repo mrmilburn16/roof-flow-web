@@ -201,6 +201,7 @@ export function createInitialMockDb(): MockDb {
     {
       id: "mt_weekly",
       title: "Weekly Leadership Meeting",
+      schedule: { type: "recurring", dayOfWeek: 2, time: "09:00", frequency: "weekly" },
       createdAt: iso(now),
       sections: [
         { id: "ms_1", kind: "segue", title: "Check-in", durationMinutes: 10 },

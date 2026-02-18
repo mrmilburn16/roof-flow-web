@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { use, useState, useEffect } from "react";
 import Link from "next/link";
-import { useRouter, useParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { ChevronUp, ChevronDown, Plus, Trash2 } from "lucide-react";
 import type { MeetingSection, MeetingSectionKind } from "@/lib/domain";
 import { useMockDb } from "@/lib/mock/MockDbProvider";
@@ -36,10 +36,13 @@ function newSection(kind: MeetingSectionKind = "segue"): MeetingSection {
   };
 }
 
-export default function EditAgendaPage() {
+export default function EditAgendaPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
   const router = useRouter();
-  const params = useParams();
-  const templateId = params.id as string;
+  const { id: templateId } = use(params);
   const { db, hasPermission, getMeetingTemplate, updateMeetingTemplate, deleteMeetingTemplate } = useMockDb();
   const { toast } = useToast();
 

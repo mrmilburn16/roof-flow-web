@@ -12,6 +12,17 @@ function formatWeek(weekOf: string) {
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
+/** Default weekly meeting: Tuesday of the week at 9:00 AM. */
+function formatMeetingDateAndTime(weekOf: string) {
+  const monday = new Date(weekOf + "T12:00:00");
+  const tuesday = new Date(monday);
+  tuesday.setDate(tuesday.getDate() + 1);
+  tuesday.setHours(9, 0, 0, 0);
+  const dateStr = tuesday.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric", year: "numeric" });
+  const timeStr = tuesday.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
+  return `${dateStr} at ${timeStr}`;
+}
+
 export default function HomePage() {
   const { db, weekOf, getMeetingRatingsAverage } = useMockDb();
   const meetingRatingAvg = getMeetingRatingsAverage();
@@ -41,7 +52,7 @@ export default function HomePage() {
   const nextMeetingCard = {
     header: "Next meeting",
     value: stats.meetingTitle,
-    sub: `Week of ${stats.weekFormatted}`,
+    sub: formatMeetingDateAndTime(stats.weekOf),
     icon: Calendar,
     href: "/meetings/run",
     label: "Run meeting",
@@ -84,12 +95,9 @@ export default function HomePage() {
 
   return (
     <div className="space-y-8">
-      <PageTitle
-        title="Home"
-        subtitle="Capture during the week, then run the L10 and resolve."
-      />
-
-      <HomeQuickStats
+      <div className="space-y-4">
+        <PageTitle subtitle="Track to-dos, goals, and issues during the week. Run your weekly meeting to align and decide." />
+        <HomeQuickStats
         stats={{
           openTodosCount: stats.openTodosCount,
           offTrackGoalsCount: stats.offTrackGoalsCount,
@@ -97,7 +105,8 @@ export default function HomePage() {
           scorecardOnTrack: stats.scorecardOnTrack,
           scorecardTotal: stats.scorecardTotal,
         }}
-      />
+        />
+      </div>
 
       {/* Featured Next meeting + grid */}
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">

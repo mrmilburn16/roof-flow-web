@@ -35,10 +35,7 @@ export default function AgendasPage() {
   return (
     <div className="space-y-8">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <PageTitle
-          title="Agendas"
-          subtitle="Templates for your meetings. Each section has a suggested time so you stay on track."
-        />
+        <PageTitle subtitle="Templates for your meetings. Each section has a suggested time so you stay on track." />
         <div className="flex flex-wrap items-center gap-2">
           {canEdit && (
             <Link href="/meetings/agendas/new" className={btnPrimary + " inline-flex gap-2"}>

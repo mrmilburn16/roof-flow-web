@@ -21,6 +21,10 @@ type MockDbApi = {
   setMeetingRunStatus(weekOf: string, status: MeetingRunStatus): void;
   setRolePermissions(roleId: string, permissionIds: PermissionCode[]): void;
   setRoleParent(roleId: string, parentRoleId: string | null): void;
+  createRole(payload: { name: string; parentRoleId?: string | null }): void;
+  updateRole(roleId: string, payload: { name?: string }): void;
+  /** Throws if any user has this role. Caller should check user count and show error or reassign first. */
+  deleteRole(roleId: string): void;
 
   createTodo(title: string): void;
   toggleTodo(todoId: string): void;
@@ -50,7 +54,7 @@ type MockDbApi = {
   deleteUser(userId: string): void;
 
   createMeetingTemplate(payload: { title: string; sections: MeetingSection[] }): void;
-  updateMeetingTemplate(templateId: string, payload: { title?: string; sections?: MeetingSection[] }): void;
+  updateMeetingTemplate(templateId: string, payload: { title?: string; sections?: MeetingSection[]; schedule?: import("@/lib/domain").MeetingSchedule | null }): void;
   deleteMeetingTemplate(templateId: string): void;
 };
 
@@ -257,6 +261,64 @@ export function MockDbProvider({ children }: { children: React.ReactNode }) {
         if (firestore) {
           const ref = docRef("roles", roleId);
           if (ref) void updateDoc(ref, { parentRoleId });
+        }
+      },
+
+      createRole(payload) {
+        const name = payload.name.trim();
+        if (!name) return;
+        const now = new Date().toISOString();
+        const id = `role_${crypto.randomUUID().slice(0, 8)}`;
+        const parentRoleId = payload.parentRoleId ?? null;
+        const role = {
+          id,
+          name,
+          permissionIds: [] as PermissionCode[],
+          parentRoleId,
+          createdAt: now,
+        };
+        if (firestore) {
+          const ref = docRef("roles", id);
+          if (ref) {
+            void setDoc(ref, { id, name, permissionIds: [], parentRoleId, createdAt: now });
+            return;
+          }
+        }
+        setDb((prev) => ({ ...prev, roles: [...prev.roles, role] }));
+      },
+
+      updateRole(roleId, payload) {
+        const existing = db.roles.find((r) => r.id === roleId);
+        if (!existing || existing.name === "Owner") return;
+        const name = payload.name?.trim();
+        if (name === undefined || name === existing.name) return;
+        const next = { ...existing, name };
+        setDb((prev) => ({
+          ...prev,
+          roles: prev.roles.map((r) => (r.id === roleId ? next : r)),
+        }));
+        if (firestore) {
+          const ref = docRef("roles", roleId);
+          if (ref) void updateDoc(ref, { name: next.name });
+        }
+      },
+
+      deleteRole(roleId) {
+        const role = db.roles.find((r) => r.id === roleId);
+        if (!role || role.name === "Owner") return;
+        const usersWithRole = db.users.filter((u) => u.roleId === roleId);
+        if (usersWithRole.length > 0) {
+          throw new Error(
+            `Cannot delete role "${role.name}": ${usersWithRole.length} user(s) have this role. Reassign them first in People.`,
+          );
+        }
+        setDb((prev) => ({
+          ...prev,
+          roles: prev.roles.filter((r) => r.id !== roleId),
+        }));
+        if (firestore) {
+          const ref = docRef("roles", roleId);
+          if (ref) void deleteDoc(ref);
         }
       },
 
@@ -684,6 +746,7 @@ export function MockDbProvider({ children }: { children: React.ReactNode }) {
           ...(payload.sections !== undefined && {
             sections: payload.sections.map((s) => ({ ...s, id: s.id || `ms_${crypto.randomUUID().slice(0, 6)}` })),
           }),
+          ...(payload.schedule !== undefined && { schedule: payload.schedule ?? undefined }),
         };
         setDb((prev) => ({
           ...prev,
@@ -695,6 +758,7 @@ export function MockDbProvider({ children }: { children: React.ReactNode }) {
             const updates: Record<string, unknown> = {};
             if (payload.title !== undefined) updates.title = next.title;
             if (payload.sections !== undefined) updates.sections = next.sections;
+            if (payload.schedule !== undefined) updates.schedule = next.schedule ?? null;
             if (Object.keys(updates).length) void updateDoc(ref, updates);
           }
         }

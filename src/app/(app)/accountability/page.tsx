@@ -1,133 +1,154 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import Link from "next/link";
-import { Users, ChevronDown, ChevronRight, ArrowDownRight, Info } from "lucide-react";
+import { Users, Info } from "lucide-react";
 import { useMockDb } from "@/lib/mock/MockDbProvider";
 import { PageTitle, card } from "@/components/ui";
 
+/** Set to false to show the full accountability chart. */
+const ACCOUNTABILITY_CHART_COMING_SOON = true;
+
 type Role = { id: string; name: string; parentRoleId?: string | null };
 
-const INDENT = 32;
+/** Build tree rows: each row is an array of { role, col }. Columns assigned so children sit under parent. */
+function buildChartRows(roles: Role[]): { role: Role; col: number }[][] {
+  const byId = new Map(roles.map((r) => [r.id, r]));
+  const owner = roles.find((r) => r.name === "Owner");
+  if (!owner) return [];
 
-function ChartNode({
+  const rows: Role[][] = [];
+  let current: Role[] = [owner];
+  while (current.length > 0) {
+    rows.push(current);
+    const next: Role[] = [];
+    for (const p of current) {
+      const children = roles.filter((r) => (r.parentRoleId ?? null) === p.id);
+      next.push(...children);
+    }
+    current = next;
+  }
+  if (rows.length === 0) return [];
+
+  const maxCols = Math.max(...rows.map((r) => r.length), 1);
+  const result: { role: Role; col: number }[][] = [];
+
+  for (let r = 0; r < rows.length; r++) {
+    const rowRoles = rows[r];
+    if (r === 0) {
+      result.push([{ role: rowRoles[0], col: Math.floor(maxCols / 2) }]);
+      continue;
+    }
+    const parentColByRoleId = new Map<string, number>();
+    for (const { role, col } of result[r - 1]) parentColByRoleId.set(role.id, col);
+    const byParent = new Map<string | null, Role[]>();
+    for (const role of rowRoles) {
+      const pid = role.parentRoleId ?? null;
+      const list = byParent.get(pid) ?? [];
+      list.push(role);
+      byParent.set(pid, list);
+    }
+    const assigned: { role: Role; col: number }[] = [];
+    for (const [, children] of byParent) {
+      const parentId = children[0].parentRoleId ?? null;
+      const parentCol = parentId != null ? parentColByRoleId.get(parentId) ?? 0 : Math.floor(maxCols / 2);
+      const k = children.length;
+      const startCol = Math.max(0, parentCol - Math.floor((k - 1) / 2));
+      children.forEach((role, i) => assigned.push({ role, col: startCol + i }));
+    }
+    assigned.sort((a, b) => a.col - b.col);
+    result.push(assigned);
+  }
+
+  return result;
+}
+
+/** Edges for SVG: (parentRow, parentCol) -> (childRow, childCol). */
+function buildEdges(rows: { role: Role; col: number }[][]): { pr: number; pc: number; cr: number; cc: number }[] {
+  const edges: { pr: number; pc: number; cr: number; cc: number }[] = [];
+  const maxCols = Math.max(...rows.map((r) => r.length > 0 ? Math.max(...r.map((x) => x.col)) + 1 : 0), 1);
+  for (let r = 1; r < rows.length; r++) {
+    for (const { role, col: cc } of rows[r]) {
+      const parentId = role.parentRoleId ?? null;
+      if (parentId == null) continue;
+      for (let i = 0; i < rows[r - 1].length; i++) {
+        if (rows[r - 1][i].role.id === parentId) {
+          const pr = r - 1;
+          const pc = rows[r - 1][i].col;
+          edges.push({ pr, pc, cr: r, cc });
+          break;
+        }
+      }
+    }
+  }
+  return edges;
+}
+
+const CARD_MIN_W = 140;
+const ROW_H = 88;
+const GAP = 16;
+
+function OrgChartCard({
   role,
-  allRoles,
-  usersByRoleId,
+  people,
   reportsToOptions,
   onReportsToChange,
   canEdit,
-  depth,
+  isOwner,
 }: {
   role: Role;
-  allRoles: Role[];
-  usersByRoleId: Map<string, { id: string; name: string }[]>;
+  people: { id: string; name: string }[];
   reportsToOptions: { id: string; name: string }[];
   onReportsToChange: (roleId: string, parentRoleId: string | null) => void;
   canEdit: boolean;
-  depth: number;
+  isOwner: boolean;
 }) {
-  const [open, setOpen] = useState(true);
-  const children = useMemo(
-    () => allRoles.filter((r) => (r.parentRoleId ?? null) === role.id),
-    [allRoles, role.id],
-  );
-  const people = usersByRoleId.get(role.id) ?? [];
-  const hasChildren = children.length > 0;
   const parentName = role.parentRoleId
     ? reportsToOptions.find((o) => o.id === role.parentRoleId)?.name ?? null
     : null;
 
   return (
     <div
-      className="relative flex-1 min-w-0"
-      style={{ paddingLeft: depth > 0 ? INDENT : 0 }}
+      className={`rounded-[var(--radius-lg)] border-2 px-3 py-2.5 text-center shadow-[var(--shadow-sm)] ${
+        isOwner
+          ? "border-[var(--border)] bg-[var(--muted-bg)]"
+          : "border-[var(--border)] bg-[var(--surface)]"
+      }`}
+      style={{ minWidth: CARD_MIN_W }}
     >
-      <div
-        className={`rounded-[var(--radius-lg)] border bg-[var(--surface)] shadow-[var(--shadow-sm)] ${depth === 0 ? "border-[var(--border)]" : "border-[var(--border)] border-l-4 border-l-[var(--text-muted)]"}`}
-      >
-        <div className="flex flex-wrap items-start gap-3 px-4 py-3">
-          {hasChildren ? (
-            <button
-              type="button"
-              onClick={() => setOpen((o) => !o)}
-              className="flex size-7 shrink-0 items-center justify-center rounded-[var(--radius)] text-[var(--text-muted)] hover:bg-[var(--nav-hover-bg)] hover:text-[var(--text-primary)] transition mt-0.5"
-              aria-expanded={open}
-            >
-              {open ? <ChevronDown className="size-4" /> : <ChevronRight className="size-4" />}
-            </button>
-          ) : (
-            <span className="size-7 shrink-0" />
-          )}
-          <div className="min-w-0 flex-1 space-y-1">
-            <div>
-              <span className="font-semibold text-[var(--text-primary)]">{role.name}</span>
-            </div>
-            {canEdit ? (
-              <div className="flex flex-wrap items-center gap-2">
-                <label htmlFor={`reports-to-${role.id}`} className="text-[12px] text-[var(--text-muted)]">
-                  Reports to
-                </label>
-                <select
-                  id={`reports-to-${role.id}`}
-                  value={role.parentRoleId ?? ""}
-                  onChange={(e) => {
-                    const v = e.target.value;
-                    onReportsToChange(role.id, v === "" ? null : v);
-                  }}
-                  className="rounded-[var(--radius)] border border-[var(--input-border)] bg-[var(--input-bg)] py-1.5 pl-2 pr-8 text-[12px] text-[var(--text-secondary)] focus:ring-2 focus:ring-[var(--ring)] focus:outline-none"
-                >
-                  <option value="">Top level</option>
-                  {reportsToOptions
-                    .filter((o) => o.id !== role.id)
-                    .map((o) => (
-                      <option key={o.id} value={o.id}>
-                        {o.name}
-                      </option>
-                    ))}
-                </select>
-              </div>
-            ) : (
-              parentName && (
-                <p className="flex items-center gap-1 text-[12px] text-[var(--text-muted)]">
-                  <ArrowDownRight className="size-3 shrink-0" aria-hidden />
-                  Reports to {parentName}
-                </p>
-              )
-            )}
-            {people.length > 0 && (
-              <>
-                <p className="text-[11px] font-medium uppercase tracking-wider text-[var(--text-muted)] pt-0.5">
-                  Filled by
-                </p>
-                <div className="flex flex-wrap gap-1.5">
-                  {people.map((u) => (
-                    <span
-                      key={u.id}
-                      className="inline-flex items-center rounded-full bg-[var(--muted-bg)] px-2 py-0.5 text-[12px] text-[var(--text-secondary)]"
-                    >
-                      {u.name}
-                    </span>
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
+      <div className="font-semibold text-[var(--text-primary)] text-[14px]">{role.name}</div>
+      {canEdit && !isOwner ? (
+        <div className="mt-1.5">
+          <label htmlFor={`reports-to-${role.id}`} className="sr-only">Reports to</label>
+          <select
+            id={`reports-to-${role.id}`}
+            value={role.parentRoleId ?? ""}
+            onChange={(e) => {
+              const v = e.target.value;
+              onReportsToChange(role.id, v === "" ? null : v);
+            }}
+            className="w-full rounded-[var(--radius)] border border-[var(--input-border)] bg-[var(--input-bg)] py-1 px-2 text-[11px] text-[var(--text-secondary)] focus:ring-1 focus:ring-[var(--ring)]"
+          >
+            <option value="">Top level</option>
+            {reportsToOptions.filter((o) => o.id !== role.id).map((o) => (
+              <option key={o.id} value={o.id}>{o.name}</option>
+            ))}
+          </select>
         </div>
-      </div>
-      {open && hasChildren && (
-        <div className="mt-3 space-y-3 pl-0">
-          {children.map((c, i) => (
-            <ChartNode
-              key={c.id}
-              role={c}
-              allRoles={allRoles}
-              usersByRoleId={usersByRoleId}
-              reportsToOptions={reportsToOptions}
-                onReportsToChange={onReportsToChange}
-                canEdit={canEdit}
-                depth={depth + 1}
-              />
+      ) : (
+        parentName && (
+          <p className="mt-0.5 text-[11px] text-[var(--text-muted)]">Reports to {parentName}</p>
+        )
+      )}
+      {people.length > 0 && (
+        <div className="mt-1.5 flex flex-wrap justify-center gap-1">
+          {people.map((u) => (
+            <span
+              key={u.id}
+              className="inline-flex rounded-full bg-[var(--muted-bg)] px-2 py-0.5 text-[11px] text-[var(--text-secondary)]"
+            >
+              {u.name}
+            </span>
           ))}
         </div>
       )}
@@ -140,16 +161,13 @@ export default function AccountabilityPage() {
   const canEdit = hasPermission("manage_roles");
 
   const roles = useMemo(() => db.roles, [db.roles]);
-  const topLevelRoles = useMemo(
-    () =>
-      roles.filter(
-        (r) =>
-          r.id !== "role_owner" &&
-          (r.parentRoleId == null || r.parentRoleId === "" || r.parentRoleId === "role_owner"),
-      ),
-    [roles],
-  );
-  const ownerRole = useMemo(() => roles.find((r) => r.name === "Owner"), [roles]);
+  const chartRows = useMemo(() => buildChartRows(roles), [roles]);
+  const edges = useMemo(() => buildEdges(chartRows), [chartRows]);
+  const maxCols = useMemo(() => {
+    if (chartRows.length === 0) return 1;
+    return Math.max(...chartRows.flatMap((r) => r.map((x) => x.col)), 0) + 1;
+  }, [chartRows]);
+
   const usersByRoleId = useMemo(() => {
     const map = new Map<string, { id: string; name: string }[]>();
     for (const u of db.users) {
@@ -168,21 +186,68 @@ export default function AccountabilityPage() {
   const totalPeople = db.users.length;
   const roleCount = roles.length;
 
+  if (ACCOUNTABILITY_CHART_COMING_SOON) {
+    return (
+      <div className="space-y-8">
+        <PageTitle subtitle="Who is accountable for what. Roles and reporting structure." />
+        <p className="text-[13px] text-[var(--text-muted)]">
+          Edit permissions for each role in{" "}
+          <Link href="/roles" className="font-medium text-[var(--text-primary)] underline">Roles</Link>.
+        </p>
+        <div className={card}>
+          <div className="flex flex-col items-center justify-center px-5 py-16 text-center">
+            <div className="flex size-14 items-center justify-center rounded-full bg-[var(--muted-bg)]">
+              <Users className="size-7 text-[var(--text-muted)]" />
+            </div>
+            <p className="mt-4 text-[16px] font-semibold text-[var(--text-primary)]">Coming soon</p>
+            <p className="mt-1 max-w-sm text-[14px] text-[var(--text-muted)]">
+              This page is coming soon. Manage roles and permissions in{" "}
+              <Link href="/roles" className="font-medium text-[var(--text-primary)] underline">Roles</Link> in the meantime.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (chartRows.length === 0) {
+    return (
+      <div className="space-y-8">
+        <PageTitle subtitle="Who is accountable for what. Roles and reporting structure." />
+        <p className="text-[13px] text-[var(--text-muted)]">
+          Edit permissions for each role in{" "}
+          <Link href="/roles" className="font-medium text-[var(--text-primary)] underline">Roles</Link>.
+        </p>
+        <div className={card}>
+          <div className="rounded-[var(--radius-lg)] border border-dashed border-[var(--border)] bg-[var(--muted-bg)] px-5 py-12 text-center">
+            <p className="text-[14px] font-medium text-[var(--text-primary)]">No roles in the chart yet</p>
+            <p className="mt-1 text-[13px] text-[var(--text-muted)]">
+              Add roles in <Link href="/roles" className="text-[var(--link)] underline hover:no-underline">Roles</Link> and set who they report to.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const gridW = maxCols * (CARD_MIN_W + GAP) - GAP;
+  const totalH = chartRows.length * (ROW_H + GAP) - GAP;
+
   return (
     <div className="space-y-8">
-      <PageTitle
-        title="Accountability Chart"
-        subtitle="Who is accountable for what. Roles and reporting structure."
-      />
+      <PageTitle subtitle="Who is accountable for what. Roles and reporting structure." />
+      <p className="text-[13px] text-[var(--text-muted)]">
+        Edit permissions for each role in{" "}
+        <Link href="/roles" className="font-medium text-[var(--text-primary)] underline">Roles</Link>.
+      </p>
 
-      {/* How to read */}
       <div className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--muted-bg)] px-4 py-3">
         <div className="flex gap-3">
           <Info className="size-5 shrink-0 text-[var(--text-muted)] mt-0.5" aria-hidden />
           <div className="min-w-0 text-[13px] text-[var(--text-secondary)]">
-            <p className="font-medium text-[var(--text-primary)]">How to read this chart</p>
+            <p className="font-medium text-[var(--text-primary)]">Org chart</p>
             <p className="mt-1">
-              Each box is a <strong>role</strong>. The <strong>Owner</strong> is at the top. Roles below show &quot;Reports to&quot; (their parent) and &quot;Filled by&quot; (people in that role). Indented roles are direct reports. Use the dropdown on each role to change who it reports to.
+              Each box is a <strong>role</strong>; lines show reporting. The <strong>Owner</strong> is at the top. Change &quot;Reports to&quot; on a role to move it. Assign people on <Link href="/people" className="text-[var(--link)] underline hover:no-underline">People</Link>; permissions on <Link href="/roles" className="text-[var(--link)] underline hover:no-underline">Roles</Link>.
             </p>
           </div>
         </div>
@@ -199,67 +264,76 @@ export default function AccountabilityPage() {
               </span>
             </div>
           </div>
-          {canEdit && (
-            <p className="mt-1 text-[13px] text-[var(--text-muted)]">
-              Change &quot;Reports to&quot; in each role card to adjust the hierarchy. Assign people to roles on <Link href="/people" className="text-[var(--link)] underline hover:no-underline">People</Link>; manage permissions on <Link href="/roles" className="text-[var(--link)] underline hover:no-underline">Roles</Link>.
-            </p>
-          )}
         </div>
-        <div className="p-5">
-          {/* Owner: top seat */}
-          {ownerRole && (
-            <div className="mb-6">
-              <p className="mb-2 text-[11px] font-medium uppercase tracking-wider text-[var(--text-muted)]">
-                Top of chart
-              </p>
-              <div className="rounded-[var(--radius-lg)] border-2 border-[var(--border)] bg-[var(--muted-bg)] px-4 py-3">
-                <div className="font-semibold text-[var(--text-primary)]">{ownerRole.name}</div>
-                {(usersByRoleId.get(ownerRole.id) ?? []).length > 0 ? (
-                  <>
-                    <p className="mt-1.5 text-[11px] font-medium uppercase tracking-wider text-[var(--text-muted)]">Filled by</p>
-                    <div className="mt-0.5 flex flex-wrap gap-1.5">
-                      {usersByRoleId.get(ownerRole.id)!.map((u) => (
-                        <span
-                          key={u.id}
-                          className="inline-flex items-center rounded-full bg-[var(--surface)] border border-[var(--border)] px-2.5 py-0.5 text-[12px] text-[var(--text-secondary)]"
-                        >
-                          {u.name}
-                        </span>
-                      ))}
-                    </div>
-                  </>
-                ) : (
-                  <p className="mt-1 text-[12px] text-[var(--text-muted)]">No one assigned yet</p>
-                )}
-              </div>
-            </div>
-          )}
+        <div className="p-6 overflow-x-auto">
+          <div
+            className="relative mx-auto"
+            style={{
+              width: gridW,
+              minHeight: totalH,
+            }}
+          >
+            {/* SVG connector lines */}
+            <svg
+              className="absolute left-0 top-0 pointer-events-none"
+              width={gridW}
+              height={totalH}
+              style={{ overflow: "visible" }}
+            >
+              {edges.map((_, i) => {
+                const colCenter = (c: number) => c * (CARD_MIN_W + GAP) + CARD_MIN_W / 2;
+                const y0 = _.pr * (ROW_H + GAP) + ROW_H;
+                const y1 = _.cr * (ROW_H + GAP);
+                const x0 = colCenter(_.pc);
+                const x1 = colCenter(_.cc);
+                const yMid = (y0 + y1) / 2;
+                const path = `M ${x0} ${y0} L ${x0} ${yMid} L ${x1} ${yMid} L ${x1} ${y1}`;
+                return (
+                  <path
+                    key={i}
+                    d={path}
+                    fill="none"
+                    stroke="var(--text-muted)"
+                    strokeOpacity="0.4"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                  />
+                );
+              })}
+            </svg>
 
-          {topLevelRoles.length === 0 ? (
-            <div className="rounded-[var(--radius-lg)] border border-dashed border-[var(--border)] bg-[var(--muted-bg)] px-5 py-8 text-center">
-              <p className="text-[14px] font-medium text-[var(--text-primary)]">
-                No other roles in the chart yet
-              </p>
-              <p className="mt-1 text-[13px] text-[var(--text-muted)]">
-                Roles are defined in your database. Once you have roles besides Owner, they’ll appear here. Use the &quot;Reports to&quot; dropdown on each role to build the hierarchy. Assign people on <Link href="/people" className="text-[var(--link)] underline hover:no-underline">People</Link>; manage permissions on <Link href="/roles" className="text-[var(--link)] underline hover:no-underline">Roles</Link>.
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {topLevelRoles.map((r, i) => (
-                <ChartNode
-                  key={r.id}
-                  role={r}
-                  allRoles={roles}
-                  usersByRoleId={usersByRoleId}
-                  reportsToOptions={reportsToOptions}
-                  onReportsToChange={handleReportsToChange}
-                  canEdit={canEdit}
-                  depth={0}
-                />
+            {/* Grid of role cards */}
+            <div className="relative flex flex-col gap-4">
+              {chartRows.map((row, rowIndex) => (
+                <div
+                  key={rowIndex}
+                  className="grid gap-4"
+                  style={{
+                    gridTemplateColumns: `repeat(${maxCols}, minmax(0, ${CARD_MIN_W}px))`,
+                    width: gridW,
+                  }}
+                >
+                  {Array.from({ length: maxCols }, (_, colIndex) => {
+                    const cell = row.find((c) => c.col === colIndex);
+                    if (!cell) return <div key={colIndex} />;
+                    const isOwner = cell.role.name === "Owner";
+                    return (
+                      <div key={cell.role.id} className="flex justify-center">
+                        <OrgChartCard
+                          role={cell.role}
+                          people={usersByRoleId.get(cell.role.id) ?? []}
+                          reportsToOptions={reportsToOptions}
+                          onReportsToChange={handleReportsToChange}
+                          canEdit={canEdit}
+                          isOwner={isOwner}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
               ))}
             </div>
-          )}
+          </div>
         </div>
       </div>
     </div>

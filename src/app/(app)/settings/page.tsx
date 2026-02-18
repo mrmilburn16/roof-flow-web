@@ -129,10 +129,7 @@ export default function SettingsPage() {
 
   return (
     <div className="space-y-8">
-      <PageTitle
-        title="Settings"
-        subtitle="Appearance, data source, and starter data."
-      />
+      <PageTitle subtitle="Appearance, data source, and starter data." />
 
       <div className="space-y-6">
         {/* App */}

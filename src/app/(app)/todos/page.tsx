@@ -90,10 +90,7 @@ export default function TodosPage() {
   return (
     <div className="space-y-8">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <PageTitle
-          title="To-Dos"
-          subtitle="Weekly action items. If it needs discussion, turn it into an Issue."
-        />
+        <PageTitle subtitle="Weekly action items. If it needs discussion, turn it into an Issue." />
         <Link href="/meetings/run" className={btnSecondary + " inline-flex gap-2"}>
           <Play className="size-4" />
           Run meeting
@@ -216,13 +213,22 @@ export default function TodosPage() {
               const due = formatDue(t.dueDate);
               const ownerName = userById.get(t.ownerId) ?? "";
               return (
-                <button
+                <div
                   key={t.id}
-                  className="flex w-full items-start gap-4 px-5 py-4 text-left transition hover:bg-[var(--muted-bg)]"
-                  onClick={() => toggleTodo(t.id)}
-                  title="Mark done"
+                  className="flex items-start gap-4 px-5 py-4 transition hover:bg-[var(--muted-bg)]"
                 >
-                  <Square className="mt-0.5 size-5 shrink-0 text-[var(--text-muted)]" />
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleTodo(t.id);
+                    }}
+                    className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] text-[var(--text-muted)] hover:border-[var(--text-muted)] hover:text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--ring)]"
+                    title="Mark done"
+                    aria-label={`Mark “${t.title}” as done`}
+                  >
+                    <Square className="size-4" />
+                  </button>
                   <div className="min-w-0 flex-1">
                     <div className="text-[14px] font-medium text-[var(--text-primary)]">
                       {t.title}
@@ -249,7 +255,7 @@ export default function TodosPage() {
                       </p>
                     )}
                   </div>
-                </button>
+                </div>
               );
             })
           )}

@@ -6,8 +6,9 @@ import { Plus, Target, Play, Calendar } from "lucide-react";
 import type { GoalStatus } from "@/lib/domain";
 import { useMockDb } from "@/lib/mock/MockDbProvider";
 import { useToast } from "@/lib/toast/ToastProvider";
-import { PageTitle, card, inputBase, btnPrimary, btnSecondary, goalStatusButtonBase, goalStatusActive, StatusBadge } from "@/components/ui";
+import { PageTitle, card, inputBase, btnPrimary, btnSecondary, StatusBadge } from "@/components/ui";
 import { EmptyState } from "@/components/EmptyState";
+import { GoalStatusIconPicker } from "@/components/GoalStatusIconPicker";
 
 const STATUSES: GoalStatus[] = ["onTrack", "offTrack", "done"];
 
@@ -19,11 +20,11 @@ function statusLabel(s: GoalStatus) {
   }
 }
 
-function statusVariant(s: GoalStatus): "success" | "warning" | "neutral" {
+function statusVariant(s: GoalStatus): "success" | "warning" | "neutral" | "done" {
   switch (s) {
     case "onTrack": return "success";
     case "offTrack": return "warning";
-    case "done": return "neutral";
+    case "done": return "done";
   }
 }
 
@@ -84,10 +85,7 @@ export default function GoalsPage() {
   return (
     <div className="space-y-8">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <PageTitle
-          title="Goals"
-          subtitle="Quarterly goals (Rocks) with simple on/off track check-ins."
-        />
+        <PageTitle subtitle="Quarterly goals (Rocks) with simple on/off track check-ins." />
         <Link href="/meetings/run" className={btnSecondary + " inline-flex gap-2"}>
           <Play className="size-4" />
           Run meeting
@@ -238,25 +236,12 @@ export default function GoalsPage() {
                     </div>
                     <StatusBadge status={statusVariant(g.status)} label={statusLabel(g.status)} />
                   </div>
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    {STATUSES.map((s) => {
-                      const isActive = g.status === s;
-                      return (
-                        <button
-                          key={s}
-                          type="button"
-                          onClick={() => setGoalStatus(g.id, s)}
-                          className={
-                            isActive
-                              ? `${goalStatusButtonBase} ${goalStatusActive[s]}`
-                              : btnSecondary
-                          }
-                          aria-pressed={isActive}
-                        >
-                          {statusLabel(s)}
-                        </button>
-                      );
-                    })}
+                  <div className="mt-4">
+                    <GoalStatusIconPicker
+                      value={g.status}
+                      onChange={(s) => setGoalStatus(g.id, s)}
+                      ariaLabel={`Status for ${g.title}`}
+                    />
                   </div>
                 </div>
               );

@@ -52,10 +52,7 @@ export default function VisionPage() {
 
   return (
     <div className="space-y-8">
-      <PageTitle
-        title="Vision & Focus"
-        subtitle="Purpose, core values, and where you're headed. Align the team around what matters."
-      />
+      <PageTitle subtitle="Purpose, core values, and where you're headed. Align the team around what matters." />
 
       <div className={card}>
         <div className="border-b border-[var(--border)] px-5 py-4">

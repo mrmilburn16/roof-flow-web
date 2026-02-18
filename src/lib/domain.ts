@@ -108,10 +108,29 @@ export type MeetingSection = {
   durationMinutes: number;
 };
 
+/** One-time meeting: single date and time. */
+export type MeetingScheduleOneTime = {
+  type: "oneTime";
+  date: string; // ISO date YYYY-MM-DD
+  time: string; // 24h "09:00"
+};
+
+/** Recurring meeting: day of week and time. 0 = Sunday, 1 = Monday, … 6 = Saturday. */
+export type MeetingScheduleRecurring = {
+  type: "recurring";
+  dayOfWeek: number;
+  time: string; // 24h "09:00"
+  frequency: "weekly" | "biweekly";
+};
+
+export type MeetingSchedule = MeetingScheduleOneTime | MeetingScheduleRecurring;
+
 export type MeetingTemplate = {
   id: string;
   title: string;
   sections: MeetingSection[];
+  /** When set, used for date/time and recurrence label. When missing, falls back to Tuesday 9:00 AM of current week. */
+  schedule?: MeetingSchedule;
   createdAt: string; // ISO
 };
 

@@ -65,7 +65,7 @@ export default function PeoplePage() {
   if (!canManage) {
     return (
       <div className="space-y-8">
-        <PageTitle title="People" subtitle="Manage team members and their roles." />
+        <PageTitle subtitle="Manage team members and their roles." />
         <div className={card + " p-10 text-center"}>
           <div className="mx-auto flex size-12 items-center justify-center rounded-full bg-[var(--muted-bg)]">
             <Lock className="size-6 text-[var(--text-muted)]" />
@@ -84,10 +84,7 @@ export default function PeoplePage() {
   return (
     <div className="space-y-8">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <PageTitle
-          title="People"
-          subtitle="Add team members and assign them to roles. Changes appear on the Accountability Chart."
-        />
+        <PageTitle subtitle="Add team members and assign them to roles. Changes appear on the Accountability Chart." />
         <button
           type="button"
           onClick={() => setShowAdd((v) => !v)}

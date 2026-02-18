@@ -68,10 +68,7 @@ export default function IssuesPage() {
   return (
     <div className="space-y-8">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <PageTitle
-          title="Issues"
-          subtitle="Identify, discuss, solve (IDS). Prioritize and resolve—turn decisions into To-Dos."
-        />
+        <PageTitle subtitle="Identify, discuss, solve (IDS). Prioritize and resolve—turn decisions into To-Dos." />
         <Link href="/meetings/run" className={btnSecondary + " inline-flex gap-2"}>
           <Play className="size-4" />
           Run meeting
@@ -242,7 +239,11 @@ export default function IssuesPage() {
                   </div>
                 </div>
                 <button
-                  onClick={() => resolveIssue(i.id)}
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    resolveIssue(i.id);
+                  }}
                   className={btnSecondary + " shrink-0"}
                 >
                   Resolve
@@ -275,7 +276,11 @@ export default function IssuesPage() {
                     </div>
                   </div>
                   <button
-                    onClick={() => reopenIssue(i.id)}
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      reopenIssue(i.id);
+                    }}
                     className={btnSecondary + " shrink-0 inline-flex items-center gap-1.5"}
                     title="Reopen this issue"
                   >

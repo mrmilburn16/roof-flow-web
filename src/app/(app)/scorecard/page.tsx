@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState, useRef, useEffect } from "react";
-import { TrendingUp, Calendar, Play, ChevronDown, Check, Plus, Pencil, Trash2 } from "lucide-react";
+import { TrendingUp, Calendar, Play, ChevronDown, Check, Plus, Pencil, Trash2, X } from "lucide-react";
 import { useMockDb } from "@/lib/mock/MockDbProvider";
 import { startOfWeek } from "@/lib/mock/mockData";
 import { useToast } from "@/lib/toast/ToastProvider";
@@ -160,10 +160,7 @@ export default function ScorecardPage() {
   return (
     <div className="space-y-8">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <PageTitle
-          title="Scorecard"
-          subtitle="Track weekly KPIs. Owners update before the meeting."
-        />
+        <PageTitle subtitle="Track weekly KPIs. Owners update before the meeting." />
         <div className="flex flex-wrap items-center gap-2">
           {canEditKpis && (
             <button type="button" onClick={openAddKpiModal} className={btnPrimary + " inline-flex gap-2"}>
@@ -249,10 +246,6 @@ export default function ScorecardPage() {
                       </ul>
                     )}
                   </div>
-                  <span className="flex items-center gap-1.5 text-[12px] text-[var(--text-muted)]">
-                    <Calendar className="size-3.5" />
-                    {formatWeekLabel(selectedWeekOf)}
-                  </span>
                 </div>
               </div>
               <div className="flex flex-wrap gap-3 text-[12px]">
@@ -272,7 +265,7 @@ export default function ScorecardPage() {
           </div>
 
           <div className="overflow-x-auto">
-            <div className="grid min-w-[640px] grid-cols-[1fr_100px_100px_180px] gap-4 border-b border-[var(--border)] bg-[var(--muted-bg)] px-5 py-3 text-[12px] font-medium uppercase tracking-wider text-[var(--text-muted)]">
+            <div className="grid min-w-[640px] grid-cols-[1fr_100px_100px_180px] gap-4 border-b border-[var(--border)] bg-[var(--muted-bg)] px-5 py-3 text-[12px] font-medium uppercase tracking-wider text-[var(--text-secondary)]">
               <div>KPI</div>
               <div className="text-right">Goal</div>
               <div className="text-right">This week</div>
@@ -371,9 +364,19 @@ export default function ScorecardPage() {
             className="relative w-full max-w-md rounded-[var(--radius-lg)] border border-[var(--surface-border)] bg-[var(--surface)] p-6 shadow-[var(--shadow-card)]"
             onKeyDown={(e) => e.key === "Escape" && setKpiModalOpen(false)}
           >
-            <h2 id="kpi-modal-title" className="text-[16px] font-semibold text-[var(--text-primary)]">
-              {editingKpiId ? "Edit KPI" : "Add KPI"}
-            </h2>
+            <div className="flex items-center justify-between">
+              <h2 id="kpi-modal-title" className="text-[16px] font-semibold text-[var(--text-primary)]">
+                {editingKpiId ? "Edit KPI" : "Add KPI"}
+              </h2>
+              <button
+                type="button"
+                onClick={() => setKpiModalOpen(false)}
+                className="rounded-[var(--radius)] p-1.5 text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)]"
+                aria-label="Close"
+              >
+                <X className="size-5" />
+              </button>
+            </div>
             <form
               className="mt-5 space-y-4"
               onSubmit={(e) => {
@@ -430,7 +433,7 @@ export default function ScorecardPage() {
                   ))}
                 </select>
               </div>
-              <div className="flex flex-wrap items-center justify-end gap-2">
+              <div className="flex flex-wrap items-center justify-center gap-2">
                 {editingKpiId && (
                   <button
                     type="button"
@@ -441,9 +444,6 @@ export default function ScorecardPage() {
                     Delete
                   </button>
                 )}
-                <button type="button" onClick={() => setKpiModalOpen(false)} className={btnSecondary}>
-                  Cancel
-                </button>
                 <button type="submit" className={btnPrimary}>
                   {editingKpiId ? "Save changes" : "Add KPI"}
                 </button>

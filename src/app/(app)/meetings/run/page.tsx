@@ -1,11 +1,13 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState, useCallback, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import type { MeetingSectionKind } from "@/lib/domain";
 import { Plus, Copy, Check, Square } from "lucide-react";
 import { useMockDb } from "@/lib/mock/MockDbProvider";
-import { PageTitle, card, inputBase, btnPrimary, btnSecondary, goalStatusButtonBase, goalStatusActive, StatusBadge } from "@/components/ui";
+import { PageTitle, card, inputBase, btnPrimary, btnSecondary, StatusBadge } from "@/components/ui";
+import { GoalStatusIconPicker } from "@/components/GoalStatusIconPicker";
 
 function formatWeek(weekOf: string) {
   const d = new Date(weekOf + "T12:00:00");
@@ -46,12 +48,22 @@ const sectionLabels: Record<MeetingSectionKind, string> = {
   conclude: "Conclude",
 };
 
+function isValidWeekParam(s: string | null): s is string {
+  if (!s || typeof s !== "string") return false;
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
+  if (!match) return false;
+  const [, y, m, d] = match.map(Number);
+  const date = new Date(y, m - 1, d);
+  return date.getFullYear() === y && date.getMonth() === m - 1 && date.getDate() === d;
+}
+
 export default function MeetingRunPage() {
   const searchParams = useSearchParams();
   const templateIdFromUrl = searchParams.get("template");
+  const weekParam = searchParams.get("week");
   const {
     db,
-    weekOf,
+    weekOf: currentWeekOf,
     createTodo,
     toggleTodo,
     createIssue,
@@ -62,6 +74,10 @@ export default function MeetingRunPage() {
     setMeetingFeedback,
     getMeetingTemplate,
   } = useMockDb();
+
+  const weekOf = isValidWeekParam(weekParam) ? weekParam : currentWeekOf;
+  const isViewingPastWeek = weekParam != null && weekOf < currentWeekOf;
+
   const meetingNotes = db.meetingNotes;
   const existingFeedback = db.meetingFeedback?.[weekOf];
 
@@ -160,11 +176,17 @@ export default function MeetingRunPage() {
 
   return (
     <div className="space-y-6">
+      {isViewingPastWeek && (
+        <div className="rounded-[var(--radius)] border border-[var(--border)] bg-[var(--muted-bg)] px-4 py-2.5 text-[13px] text-[var(--text-secondary)]">
+          <span className="font-medium text-[var(--text-primary)]">Viewing past meeting.</span>
+          {" "}
+          <Link href="/meetings" className="font-medium underline-offset-4 hover:underline">
+            Back to meetings
+          </Link>
+        </div>
+      )}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <PageTitle
-          title="Run meeting"
-          subtitle={`${template?.title ?? "Weekly Meeting"} · Week of ${formatWeek(weekOf)}`}
-        />
+        <PageTitle subtitle={`${template?.title ?? "Weekly Meeting"} · Week of ${formatWeek(weekOf)}`} />
         <div className="flex flex-wrap gap-2">
           <button
             className={btnSecondary}
@@ -192,7 +214,7 @@ export default function MeetingRunPage() {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[220px_1fr_300px]">
         {/* Agenda */}
         <aside className={card}>
-          <div className="border-b border-[var(--border)] px-4 py-3">
+          <div className="border-b border-[var(--border)] px-4 pt-3 pb-4">
             <div className="text-[12px] font-medium uppercase tracking-wider text-[var(--text-muted)]">
               Agenda
             </div>
@@ -211,13 +233,21 @@ export default function MeetingRunPage() {
                   className={[
                     "flex w-full items-center justify-between rounded-[var(--radius)] px-3 py-2.5 text-left text-[14px] font-medium transition",
                     active
-                      ? "bg-[var(--nav-active-bg)] text-[var(--nav-active-text)]"
+                      ? "bg-zinc-800 text-white shadow-sm"
                       : "text-[var(--text-secondary)] hover:bg-[var(--nav-hover-bg)] hover:text-[var(--text-primary)]",
                   ].join(" ")}
                 >
                   <span>{sectionLabels[k]}</span>
                   {mins != null && (
-                    <span className="text-[12px] opacity-80">{mins} min</span>
+                    <span
+                      className={
+                        active
+                          ? "text-[12px] text-inherit opacity-90"
+                          : "text-[12px] opacity-80"
+                      }
+                    >
+                      {mins} min
+                    </span>
                   )}
                 </button>
               );
@@ -345,13 +375,13 @@ export default function MeetingRunPage() {
                           </p>
                         )}
                       </div>
-                      <StatusBadge
+                        <StatusBadge
                         status={
                           g.status === "onTrack"
                             ? "success"
                             : g.status === "offTrack"
                               ? "warning"
-                              : "neutral"
+                              : "done"
                         }
                         label={
                           g.status === "onTrack"
@@ -362,26 +392,12 @@ export default function MeetingRunPage() {
                         }
                       />
                     </div>
-                    <div className="mt-4 flex flex-wrap gap-2">
-                      {(["onTrack", "offTrack", "done"] as const).map((s) => {
-                        const isActive = g.status === s;
-                        const label = s === "onTrack" ? "On track" : s === "offTrack" ? "Off track" : "Done";
-                        return (
-                          <button
-                            key={s}
-                            type="button"
-                            className={
-                              isActive
-                                ? `${goalStatusButtonBase} ${goalStatusActive[s]}`
-                                : btnSecondary
-                            }
-                            onClick={() => setGoalStatus(g.id, s)}
-                            aria-pressed={isActive}
-                          >
-                            {label}
-                          </button>
-                        );
-                      })}
+                    <div className="mt-4">
+                      <GoalStatusIconPicker
+                        value={g.status}
+                        onChange={(s) => setGoalStatus(g.id, s)}
+                        ariaLabel={`Status for ${g.title}`}
+                      />
                     </div>
                   </div>
                 ))}
@@ -394,13 +410,22 @@ export default function MeetingRunPage() {
                   <p className="text-[14px] text-[var(--text-muted)]">No open To-Dos.</p>
                 ) : (
                   openTodos.map((t) => (
-                    <button
+                    <div
                       key={t.id}
-                      className="flex w-full items-start gap-4 rounded-[var(--radius)] border border-[var(--border)] p-4 text-left transition hover:bg-[var(--muted-bg)]"
-                      onClick={() => toggleTodo(t.id)}
-                      title="Mark done"
+                      className="flex items-start gap-4 rounded-[var(--radius)] border border-[var(--border)] p-4 transition hover:bg-[var(--muted-bg)]"
                     >
-                      <Square className="mt-0.5 size-5 shrink-0 text-[var(--text-muted)]" />
+                      <button
+                        type="button"
+                        className="flex size-8 shrink-0 items-center justify-center rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] text-[var(--text-muted)] hover:border-[var(--text-muted)] hover:text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--ring)]"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleTodo(t.id);
+                        }}
+                        title="Mark done"
+                        aria-label={`Mark “${t.title}” as done`}
+                      >
+                        <Square className="size-4" />
+                      </button>
                       <div className="min-w-0 flex-1">
                         <div className="text-[14px] font-medium text-[var(--text-primary)]">
                           {t.title}
@@ -420,7 +445,7 @@ export default function MeetingRunPage() {
                           </p>
                         )}
                       </div>
-                    </button>
+                    </div>
                   ))
                 )}
               </div>
@@ -453,8 +478,12 @@ export default function MeetingRunPage() {
                         )}
                       </div>
                       <button
+                        type="button"
                         className={btnSecondary + " shrink-0"}
-                        onClick={() => resolveIssue(i.id)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          resolveIssue(i.id);
+                        }}
                       >
                         Resolve
                       </button>

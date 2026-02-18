@@ -1,15 +1,17 @@
-const card =
-  "rounded-[var(--radius-lg)] border border-[var(--surface-border)] bg-[var(--surface)] shadow-[var(--shadow-card)]";
+const card = "rounded-[var(--card-radius)] bg-[var(--surface)] shadow-[var(--card-shadow)]";
 
 const cardHeader = "text-[13px] font-medium tracking-[-0.01em] text-[var(--text-secondary)]";
 
 const cardValue = "mt-1 text-[15px] font-semibold tracking-[-0.02em] text-[var(--text-primary)]";
 
 const btnPrimary =
-  "inline-flex items-center justify-center gap-2 rounded-[var(--radius)] bg-[var(--btn-primary-bg)] px-3 py-2.5 text-[13px] font-medium text-[var(--btn-primary-text)] transition hover:opacity-90 active:scale-[0.98]";
+  "cursor-pointer inline-flex items-center justify-center gap-2 rounded-[var(--radius)] bg-[var(--btn-primary-bg)] px-3 py-2.5 text-[13px] font-medium text-[var(--btn-primary-text)] transition hover:opacity-90 active:scale-[0.98]";
 
 const btnSecondary =
-  "inline-flex items-center justify-center gap-2 rounded-[var(--radius)] border border-[var(--btn-secondary-border)] bg-[var(--btn-secondary-bg)] px-3 py-2.5 text-[13px] font-medium text-[var(--btn-secondary-text)] transition hover:bg-[var(--btn-secondary-hover)] active:scale-[0.98]";
+  "cursor-pointer inline-flex items-center justify-center gap-2 rounded-[var(--radius)] border border-[var(--btn-secondary-border)] bg-[var(--btn-secondary-bg)] px-3 py-2.5 text-[13px] font-medium text-[var(--btn-secondary-text)] transition hover:bg-[var(--btn-secondary-hover)] active:scale-[0.98]";
+
+const btnDanger =
+  "cursor-pointer inline-flex items-center justify-center gap-2 rounded-[var(--radius)] border border-transparent bg-[var(--btn-danger-bg)] px-3 py-2.5 text-[13px] font-medium text-[var(--btn-danger-text)] transition hover:bg-[var(--btn-danger-hover)] active:scale-[0.98]";
 
 /** Active state for goal status buttons: use badge colors so selected option is obvious */
 const goalStatusButtonBase =
@@ -17,26 +19,33 @@ const goalStatusButtonBase =
 const goalStatusActive = {
   onTrack: "border-[var(--badge-success-text)] bg-[var(--goal-btn-on-bg)] text-[var(--badge-success-text)]",
   offTrack: "border-[var(--badge-warning-text)] bg-[var(--goal-btn-off-bg)] text-[var(--badge-warning-text)]",
-  done: "border-[var(--badge-neutral-text)] bg-[var(--goal-btn-done-bg)] text-[var(--badge-neutral-text)]",
+  done: "border-[var(--goal-btn-done-text)] bg-[var(--goal-btn-done-bg)] text-[var(--goal-btn-done-text)]",
 } as const;
 
+/** Inactive state for goal status pills: outline style so unselected options don’t look plain grey */
+const goalStatusInactive =
+  "border border-[var(--border)] bg-[var(--surface)] text-[var(--text-secondary)] hover:border-[var(--text-muted)] hover:bg-[var(--muted-bg)]";
+
 const inputBase =
-  "w-full rounded-[var(--radius)] border border-[var(--input-border)] bg-[var(--input-bg)] px-3.5 py-2.5 text-[14px] text-[var(--input-text)] placeholder:text-[var(--input-placeholder)] transition focus:ring-2 focus:ring-[var(--ring)]";
+  "w-full rounded-[var(--radius)] border border-[var(--input-border)] bg-[var(--input-bg)] px-3.5 py-2.5 text-[14px] text-[var(--input-text)] placeholder:text-[var(--input-placeholder)] outline-none transition-none focus:ring-2 focus:ring-[var(--ring)] focus:border-[var(--input-border)]";
 
 export function PageTitle({
   title,
   subtitle,
 }: {
-  title: string;
+  title?: string;
   subtitle?: string;
 }) {
+  if (!title && !subtitle) return null;
   return (
     <div>
-      <h1 className="text-[22px] font-semibold tracking-[-0.03em] text-[var(--text-primary)]">
-        {title}
-      </h1>
+      {title ? (
+        <h2 className="text-[22px] font-semibold tracking-[-0.03em] text-[var(--text-primary)]">
+          {title}
+        </h2>
+      ) : null}
       {subtitle ? (
-        <p className="mt-1 text-[14px] leading-relaxed text-[var(--text-muted)]">
+        <p className={title ? "mt-1 text-[14px] leading-relaxed text-[var(--text-muted)]" : "text-[14px] leading-relaxed text-[var(--text-muted)]"}>
           {subtitle}
         </p>
       ) : null}
@@ -48,7 +57,7 @@ export function StatusBadge({
   status,
   label,
 }: {
-  status: "success" | "warning" | "neutral";
+  status: "success" | "warning" | "neutral" | "done";
   label: string;
 }) {
   const bgVar =
@@ -56,13 +65,17 @@ export function StatusBadge({
       ? "var(--badge-success-bg)"
       : status === "warning"
         ? "var(--badge-warning-bg)"
-        : "var(--badge-neutral-bg)";
+        : status === "done"
+          ? "var(--goal-btn-done-bg)"
+          : "var(--badge-neutral-bg)";
   const textVar =
     status === "success"
       ? "var(--badge-success-text)"
       : status === "warning"
         ? "var(--badge-warning-text)"
-        : "var(--badge-neutral-text)";
+        : status === "done"
+          ? "var(--goal-btn-done-text)"
+          : "var(--badge-neutral-text)";
   return (
     <span
       className="rounded-full px-2.5 py-1 text-[11px] font-medium"
@@ -73,4 +86,15 @@ export function StatusBadge({
   );
 }
 
-export { card, cardHeader, cardValue, btnPrimary, btnSecondary, goalStatusButtonBase, goalStatusActive, inputBase };
+export {
+  card,
+  cardHeader,
+  cardValue,
+  btnPrimary,
+  btnSecondary,
+  btnDanger,
+  goalStatusButtonBase,
+  goalStatusActive,
+  goalStatusInactive,
+  inputBase,
+};
