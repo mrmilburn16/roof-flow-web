@@ -141,7 +141,24 @@ If you post in the channel but the to-do doesn’t appear in the web app, check:
 4. **Web app uses Firestore**  
    Set `NEXT_PUBLIC_USE_FIRESTORE=true` in Vercel (or your host). The To-Dos page reads from Firestore; if this is off, new to-dos from Slack won’t show.
 
-5. **Vercel / server logs**  
+5. **Firestore rules (if you see “Missing or insufficient permissions”)**  
+   If the To-Dos page shows a yellow banner: *“Firestore is enabled, but the app couldn’t subscribe to live updates: Missing or insufficient permissions”*, the client is being blocked by Firestore security rules. With **Auth off**, the app doesn’t sign users in, so you must allow unauthenticated read (and write for the app) for your team path:
+   - Open [Firebase Console](https://console.firebase.google.com) → your project → **Firestore Database** → **Rules**.
+   - Add or replace with rules that allow your company/team path (use your real `COMPANY_ID` and `TEAM_ID` if different; these match `NEXT_PUBLIC_COMPANY_ID` and `NEXT_PUBLIC_TEAM_ID`):
+   ```text
+   rules_version = '2';
+   service cloud.firestore {
+     match /databases/{database}/documents {
+       match /companies/c_roofco/teams/t_leadership/{document=**} {
+         allow read, write: if true;
+       }
+     }
+   }
+   ```
+   - Click **Publish**. Reload the To-Dos page; Slack to-dos should then appear.  
+   When you enable Firebase Auth later, tighten the rule (e.g. `allow read, write: if request.auth != null;`). A copy of these rules is in the repo as `firestore.rules`.
+
+6. **Vercel / server logs**  
    In Vercel → Project → **Logs** or **Functions**, look for requests to `/api/slack/events` when you post in Slack. If you see 401, the Request URL or signing secret may be wrong. If you see 200 but no to-do, check for these messages:
    - `[Slack events] No Firestore` → set `FIREBASE_SERVICE_ACCOUNT_JSON` and ensure Firestore is enabled.
    - `[Slack events] No Slack token` → reconnect Slack in Integrations and pick a channel.
@@ -151,7 +168,16 @@ If you post in the channel but the to-do doesn’t appear in the web app, check:
 
    For **Create channel** not appearing in Slack: check logs for `[Slack create channel]` — they show the Slack API response (`ok`, `error`, `channel`). If `error` is `missing_scope`, add `channels:manage` and reinstall the app.
 
-## 7. Removing the test Slack channel
+## 7. Editing and deleting Slack to-dos
+
+To-dos created from Slack are stored in Firestore like any other to-do. On the **To-Dos** page you can:
+- **Edit** — click the pencil icon to change title, due date, owner, or notes.
+- **Delete** — click the trash icon and confirm.
+- **Mark done** — click the checkbox to move the item to Completed.
+
+These actions are available for Slack entries as long as your role has “Edit to-dos” (e.g. Owner, or roles that include `edit_todos` in Settings → Roles).
+
+## 8. Removing the test Slack channel
 
 To remove the Slack integration or the test channel:
 
