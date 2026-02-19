@@ -8,7 +8,7 @@ export async function GET() {
   if (!token) {
     return NextResponse.json({ error: "Slack not connected" }, { status: 401 });
   }
-  const res = await fetch("https://slack.com/api/conversations.list?limit=200&types=public_channel", {
+  const res = await fetch("https://slack.com/api/conversations.list?limit=200&types=public_channel&exclude_archived=true", {
     headers: { Authorization: `Bearer ${token}` },
   });
   const data = (await res.json()) as { ok?: boolean; error?: string; channels?: { id: string; name: string; is_member?: boolean }[] };

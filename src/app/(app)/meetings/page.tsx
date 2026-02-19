@@ -420,6 +420,12 @@ export default function MeetingsPage() {
                   <Link href="/meetings/agendas" className={btnSecondary + " inline-flex gap-2"}>
                     View agendas
                   </Link>
+                  <Link
+                    href="/integrations"
+                    className="text-[13px] text-[var(--text-muted)] underline hover:text-[var(--text-secondary)]"
+                  >
+                    Sync L10 to Outlook
+                  </Link>
                   {canCancelMeeting && (
                     <div className="relative inline-block" ref={actionsRef}>
                       {isCanceled ? (

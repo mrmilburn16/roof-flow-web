@@ -19,6 +19,7 @@ export async function POST(request: NextRequest) {
     team_id?: string;
     event?: {
       type?: string;
+      subtype?: string;
       channel?: string;
       user?: string;
       text?: string;
@@ -63,6 +64,11 @@ export async function POST(request: NextRequest) {
 
   const event = payload.event;
   if (event.type !== "message") {
+    return NextResponse.json({ ok: true });
+  }
+
+  if (event.subtype) {
+    console.info("[Slack events] Skip: message subtype (system/bot)", { subtype: event.subtype });
     return NextResponse.json({ ok: true });
   }
 

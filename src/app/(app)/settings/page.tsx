@@ -4,8 +4,16 @@ import Link from "next/link";
 import { Suspense, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { collection, doc, setDoc } from "firebase/firestore";
-import { Settings, Palette, Database, Zap, Shield, User, Users, Layout } from "lucide-react";
+import { Settings, Palette, Database, Zap, Shield, User, Users, Layout, Download } from "lucide-react";
 import { createInitialMockDb, startOfWeek } from "@/lib/mock/mockData";
+import { useMockDb } from "@/lib/mock/MockDbProvider";
+import {
+  exportTodosCSV,
+  exportGoalsCSV,
+  exportScorecardCSV,
+  exportFullJSON,
+  downloadFile,
+} from "@/lib/export/exportData";
 import { getFirebaseDb, isFirebaseConfigured } from "@/lib/firebase/client";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { useTheme } from "@/lib/theme/ThemeProvider";
@@ -35,6 +43,7 @@ function SettingsContent() {
   const [msg, setMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   const scope = useMemo(() => ({ companyId, teamId }), [companyId, teamId]);
+  const { db } = useMockDb();
 
   async function seed() {
     setMsg(null);
@@ -226,6 +235,64 @@ function SettingsContent() {
             </Link>
           </div>
         </section>
+
+        <section className={card}>
+          <div className="border-b border-[var(--border)] px-6 py-5">
+            <h2 className="flex items-center gap-2.5 text-[15px] font-semibold text-[var(--text-primary)]">
+              <Download className="size-4 text-[var(--text-muted)]" />
+              Export data
+            </h2>
+            <p className="mt-1 text-[13px] text-[var(--helper-text)]">
+              Download to-dos, goals, scorecard, or a full backup. Opens in Excel or any spreadsheet; JSON for full backup.
+            </p>
+          </div>
+          <div className="p-6 flex flex-wrap gap-3">
+            <button
+              type="button"
+              onClick={() => {
+                const csv = exportTodosCSV(db);
+                downloadFile("roof-flow-todos.csv", csv, "text/csv;charset=utf-8");
+              }}
+              className="inline-flex items-center gap-2 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] px-4 py-2.5 text-[13px] font-medium text-[var(--text-secondary)] hover:bg-[var(--nav-hover-bg)] hover:text-[var(--text-primary)]"
+            >
+              <Download className="size-4" />
+              To-dos (CSV)
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                const csv = exportGoalsCSV(db);
+                downloadFile("roof-flow-goals.csv", csv, "text/csv;charset=utf-8");
+              }}
+              className="inline-flex items-center gap-2 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] px-4 py-2.5 text-[13px] font-medium text-[var(--text-secondary)] hover:bg-[var(--nav-hover-bg)] hover:text-[var(--text-primary)]"
+            >
+              <Download className="size-4" />
+              Goals (CSV)
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                const csv = exportScorecardCSV(db);
+                downloadFile("roof-flow-scorecard.csv", csv, "text/csv;charset=utf-8");
+              }}
+              className="inline-flex items-center gap-2 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] px-4 py-2.5 text-[13px] font-medium text-[var(--text-secondary)] hover:bg-[var(--nav-hover-bg)] hover:text-[var(--text-primary)]"
+            >
+              <Download className="size-4" />
+              Scorecard (CSV)
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                const json = exportFullJSON(db);
+                downloadFile("roof-flow-backup.json", json, "application/json;charset=utf-8");
+              }}
+              className="inline-flex items-center gap-2 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] px-4 py-2.5 text-[13px] font-medium text-[var(--text-secondary)] hover:bg-[var(--nav-hover-bg)] hover:text-[var(--text-primary)]"
+            >
+              <Download className="size-4" />
+              Export all (JSON)
+            </button>
+          </div>
+        </section>
       </div>
     );
   }
@@ -332,6 +399,65 @@ function SettingsContent() {
                 <span><span className="text-[var(--text-muted)]">Team</span> {scope.teamId}</span>
               </div>
             </div>
+          </div>
+        </div>
+
+        {/* Export data */}
+        <div className={card}>
+          <div className="border-b border-[var(--border)] px-5 py-4">
+            <h2 className="flex items-center gap-2 text-[14px] font-semibold text-[var(--text-primary)]">
+              <Download className="size-4" />
+              Export data
+            </h2>
+            <p className="mt-1 text-[13px] text-[var(--text-muted)]">
+              Download to-dos, goals, scorecard, or a full backup as CSV or JSON. Owner names are included.
+            </p>
+          </div>
+          <div className="p-5 flex flex-wrap gap-3">
+            <button
+              type="button"
+              onClick={() => {
+                const csv = exportTodosCSV(db);
+                downloadFile("roof-flow-todos.csv", csv, "text/csv;charset=utf-8");
+              }}
+              className="inline-flex items-center gap-2 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] px-4 py-2.5 text-[13px] font-medium text-[var(--text-secondary)] hover:bg-[var(--nav-hover-bg)] hover:text-[var(--text-primary)]"
+            >
+              <Download className="size-4" />
+              To-dos (CSV)
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                const csv = exportGoalsCSV(db);
+                downloadFile("roof-flow-goals.csv", csv, "text/csv;charset=utf-8");
+              }}
+              className="inline-flex items-center gap-2 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] px-4 py-2.5 text-[13px] font-medium text-[var(--text-secondary)] hover:bg-[var(--nav-hover-bg)] hover:text-[var(--text-primary)]"
+            >
+              <Download className="size-4" />
+              Goals (CSV)
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                const csv = exportScorecardCSV(db);
+                downloadFile("roof-flow-scorecard.csv", csv, "text/csv;charset=utf-8");
+              }}
+              className="inline-flex items-center gap-2 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] px-4 py-2.5 text-[13px] font-medium text-[var(--text-secondary)] hover:bg-[var(--nav-hover-bg)] hover:text-[var(--text-primary)]"
+            >
+              <Download className="size-4" />
+              Scorecard (CSV)
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                const json = exportFullJSON(db);
+                downloadFile("roof-flow-backup.json", json, "application/json;charset=utf-8");
+              }}
+              className="inline-flex items-center gap-2 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] px-4 py-2.5 text-[13px] font-medium text-[var(--text-secondary)] hover:bg-[var(--nav-hover-bg)] hover:text-[var(--text-primary)]"
+            >
+              <Download className="size-4" />
+              Export all (JSON)
+            </button>
           </div>
         </div>
 

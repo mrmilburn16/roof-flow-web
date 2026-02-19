@@ -1,9 +1,11 @@
 "use client";
 
 import { Suspense, useState, useEffect, useRef } from "react";
-import { useSearchParams } from "next/navigation";
-import { MessageCircle, Building2, LayoutGrid, Cloud, Plug2, Plus, Check } from "lucide-react";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
+import { MessageCircle, Building2, LayoutGrid, Cloud, Plug2, Plus, Check, Calendar } from "lucide-react";
 import { PageTitle, btnPrimary, btnSecondary, inputBase, Select } from "@/components/ui";
+import { useFeedbackOpen } from "@/components/FeedbackProvider";
+import { useMockDb } from "@/lib/mock/MockDbProvider";
 
 /** Slack from World Vector Logo; Acculynx, Buildertrend, Microsoft 365 icons disabled for now */
 const LOGOS = {
@@ -46,7 +48,10 @@ function IntegrationLogo({
 type SlackStatus = { connected: boolean; channelId: string | null; channelName: string | null };
 type SlackChannel = { id: string; name: string; isMember?: boolean };
 
+type MicrosoftStatus = { connected: boolean; outlookEventId: string | null };
+
 const SLACK_STATUS_CACHE_KEY = "roofflow_slack_status";
+const MICROSOFT_STATUS_CACHE_KEY = "roofflow_microsoft_status";
 
 function getCachedSlackStatus(): SlackStatus | null {
   if (typeof window === "undefined") return null;
@@ -64,6 +69,27 @@ function setCachedSlackStatus(status: SlackStatus): void {
   if (typeof window === "undefined") return;
   try {
     sessionStorage.setItem(SLACK_STATUS_CACHE_KEY, JSON.stringify(status));
+  } catch {
+    /* ignore */
+  }
+}
+
+function getCachedMicrosoftStatus(): MicrosoftStatus | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const s = sessionStorage.getItem(MICROSOFT_STATUS_CACHE_KEY);
+    if (!s) return null;
+    const p = JSON.parse(s) as MicrosoftStatus;
+    return p && typeof p.connected === "boolean" ? p : null;
+  } catch {
+    return null;
+  }
+}
+
+function setCachedMicrosoftStatus(status: MicrosoftStatus): void {
+  if (typeof window === "undefined") return;
+  try {
+    sessionStorage.setItem(MICROSOFT_STATUS_CACHE_KEY, JSON.stringify(status));
   } catch {
     /* ignore */
   }
@@ -94,8 +120,10 @@ const ROADMAP = [
 ] as const;
 
 function IntegrationsContent() {
+  const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
-  const [slackStatus, setSlackStatus] = useState<SlackStatus | null>(() => getCachedSlackStatus());
+  const [slackStatus, setSlackStatus] = useState<SlackStatus | null>(null);
   const [slackChannels, setSlackChannels] = useState<SlackChannel[] | null>(null);
   const [slackLoading, setSlackLoading] = useState(true);
   const [channelLoading, setChannelLoading] = useState(false);
@@ -103,16 +131,33 @@ function IntegrationsContent() {
   const [creatingChannel, setCreatingChannel] = useState(false);
   const [setChannelLoadingId, setSetChannelLoadingId] = useState<string | null>(null);
   const [disconnectLoading, setDisconnectLoading] = useState(false);
+  const [connectingToSlack, setConnectingToSlack] = useState(false);
   const [message, setMessage] = useState<"connected" | "error" | null>(null);
   const [playConnectedAnimation, setPlayConnectedAnimation] = useState(false);
   const connectedAnimatedRef = useRef(false);
   const slackSectionRef = useRef<HTMLElement>(null);
   const didScrollToSlackRef = useRef(false);
+  const { open: openFeedback } = useFeedbackOpen();
+
+  const [microsoftStatus, setMicrosoftStatus] = useState<MicrosoftStatus | null>(null);
+  const [microsoftLoading, setMicrosoftLoading] = useState(true);
+  const [microsoftMessage, setMicrosoftMessage] = useState<"connected" | "error" | null>(null);
+  const [connectingToMicrosoft, setConnectingToMicrosoft] = useState(false);
+  const [microsoftDisconnectLoading, setMicrosoftDisconnectLoading] = useState(false);
+  const [syncCalendarLoading, setSyncCalendarLoading] = useState(false);
+  const [syncCalendarMessage, setSyncCalendarMessage] = useState<"success" | "error" | null>(null);
+  const [syncCalendarError, setSyncCalendarError] = useState<string | null>(null);
+  const microsoftSectionRef = useRef<HTMLElement>(null);
+  const didScrollToMicrosoftRef = useRef(false);
+  const { getMeetingTemplate } = useMockDb();
 
   useEffect(() => {
     const q = searchParams.get("slack");
     if (q === "connected") setMessage("connected");
     if (q === "error") setMessage("error");
+    const m = searchParams.get("microsoft");
+    if (m === "connected") setMicrosoftMessage("connected");
+    if (m === "error") setMicrosoftMessage("error");
   }, [searchParams]);
 
   // When connected, always fetch fresh status and channel list (e.g. after reconnect).
@@ -151,11 +196,72 @@ function IntegrationsContent() {
     return () => { cancelled = true; };
   }, [searchParams.get("slack")]);
 
+  // When URL says slack=connected but status returns not connected, clean the URL so it's not misleading
+  useEffect(() => {
+    if (slackLoading || searchParams.get("slack") !== "connected") return;
+    if (slackStatus?.connected === false) {
+      const next = new URLSearchParams(searchParams.toString());
+      next.delete("slack");
+      const q = next.toString();
+      router.replace(q ? `${pathname}?${q}` : pathname, { scroll: false });
+      setMessage(null);
+    }
+  }, [slackLoading, slackStatus?.connected, searchParams, pathname, router]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/microsoft/status");
+        if (cancelled) return;
+        const data = (await res.json()) as MicrosoftStatus;
+        setMicrosoftStatus(data);
+        setCachedMicrosoftStatus(data);
+      } catch {
+        if (!cancelled) {
+          const fallback: MicrosoftStatus = { connected: false, outlookEventId: null };
+          setMicrosoftStatus(fallback);
+          setCachedMicrosoftStatus(fallback);
+        }
+      } finally {
+        if (!cancelled) setMicrosoftLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [searchParams.get("microsoft")]);
+
+  useEffect(() => {
+    if (microsoftLoading || searchParams.get("microsoft") !== "connected") return;
+    if (microsoftStatus?.connected === false) {
+      const next = new URLSearchParams(searchParams.toString());
+      next.delete("microsoft");
+      next.delete("storage");
+      const q = next.toString();
+      router.replace(q ? `${pathname}?${q}` : pathname, { scroll: false });
+      setMicrosoftMessage(null);
+    }
+  }, [microsoftLoading, microsoftStatus?.connected, searchParams, pathname, router]);
+
+  useEffect(() => {
+    if (microsoftMessage !== "connected" || didScrollToMicrosoftRef.current) return;
+    didScrollToMicrosoftRef.current = true;
+    const el = microsoftSectionRef.current;
+    if (!el) return;
+    const t = setTimeout(() => {
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 100);
+    return () => clearTimeout(t);
+  }, [microsoftMessage]);
+
   const connectSlack = () => {
+    setConnectingToSlack(true);
     window.location.href = "/api/slack/oauth";
   };
 
-  const showAsConnected = Boolean(slackStatus?.connected || message === "connected");
+  // Use actual status once we have it; only use URL message while still loading (e.g. right after OAuth redirect)
+  const showAsConnected = slackLoading
+    ? Boolean(message === "connected" || slackStatus?.connected)
+    : Boolean(slackStatus?.connected);
 
   useEffect(() => {
     if (typeof window === "undefined" || connectedAnimatedRef.current) return;
@@ -166,7 +272,7 @@ function IntegrationsContent() {
     const t = setTimeout(() => {
       window.localStorage.setItem("roofflow_slack_connected_animated", "1");
       setPlayConnectedAnimation(false);
-    }, 700);
+    }, 2600);
     return () => clearTimeout(t);
   }, [showAsConnected, message]);
 
@@ -197,6 +303,7 @@ function IntegrationsContent() {
 
   const disconnectSlack = async () => {
     if (disconnectLoading) return;
+    const scrollY = typeof window !== "undefined" ? window.scrollY : 0;
     setDisconnectLoading(true);
     try {
       const res = await fetch("/api/slack/disconnect", { method: "POST" });
@@ -207,6 +314,86 @@ function IntegrationsContent() {
       }
     } finally {
       setDisconnectLoading(false);
+      if (typeof window !== "undefined" && scrollY > 0) {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => window.scrollTo(0, scrollY));
+        });
+      }
+    }
+  };
+
+  const connectMicrosoft = () => {
+    setConnectingToMicrosoft(true);
+    window.location.href = "/api/microsoft/oauth";
+  };
+
+  const showMicrosoftConnected =
+    microsoftLoading
+      ? Boolean(microsoftMessage === "connected" || microsoftStatus?.connected)
+      : Boolean(microsoftStatus?.connected);
+
+  const disconnectMicrosoft = async () => {
+    if (microsoftDisconnectLoading) return;
+    const scrollY = typeof window !== "undefined" ? window.scrollY : 0;
+    setMicrosoftDisconnectLoading(true);
+    try {
+      const res = await fetch("/api/microsoft/disconnect", { method: "POST" });
+      if (res.ok) {
+        setCachedMicrosoftStatus({ connected: false, outlookEventId: null });
+        setMicrosoftStatus({ connected: false, outlookEventId: null });
+      }
+    } finally {
+      setMicrosoftDisconnectLoading(false);
+      if (typeof window !== "undefined" && scrollY > 0) {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => window.scrollTo(0, scrollY));
+        });
+      }
+    }
+  };
+
+  const syncL10ToCalendar = async () => {
+    if (syncCalendarLoading || !showMicrosoftConnected) return;
+    setSyncCalendarMessage(null);
+    setSyncCalendarError(null);
+    setSyncCalendarLoading(true);
+    try {
+      const template = getMeetingTemplate();
+      const body: {
+        title?: string;
+        schedule?: import("@/lib/domain").MeetingSchedule;
+        timeZone?: string;
+      } = {};
+      if (template?.title) body.title = template.title;
+      if (template?.schedule) body.schedule = template.schedule;
+      try {
+        body.timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      } catch {
+        body.timeZone = "America/New_York";
+      }
+      const res = await fetch("/api/microsoft/sync-calendar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const data = (await res.json()) as { ok?: boolean; error?: string; eventId?: string };
+      if (data.ok) {
+        setSyncCalendarMessage("success");
+        setSyncCalendarError(null);
+        setMicrosoftStatus((prev) => (prev ? { ...prev, outlookEventId: data.eventId ?? null } : prev));
+        setCachedMicrosoftStatus({
+          connected: true,
+          outlookEventId: data.eventId ?? null,
+        });
+      } else {
+        setSyncCalendarMessage("error");
+        setSyncCalendarError(data.error ?? "Sync failed.");
+      }
+    } catch {
+      setSyncCalendarMessage("error");
+      setSyncCalendarError("Request failed.");
+    } finally {
+      setSyncCalendarLoading(false);
     }
   };
 
@@ -331,14 +518,30 @@ function IntegrationsContent() {
               {message === "error" && (
                 <p className="mt-2 text-[14px] text-[var(--badge-warning-text)]">Slack connection failed. Try again.</p>
               )}
+              {searchParams.get("storage") === "failed" && (
+                <div className="mt-2 rounded-[var(--radius)] border border-[var(--badge-warning-text)]/40 bg-[var(--badge-warning-bg)] px-3 py-2 text-[13px] text-[var(--badge-warning-text)]">
+                  Connected to Slack, but the connection couldn’t be saved. To-dos from Slack may stop working after a redeploy. Check Firebase and try <strong>Disconnect</strong> then <strong>Connect to Slack</strong> again.
+                </div>
+              )}
               {message === "connected" && !slackStatus?.connected && !slackLoading && (
-                <p className="mt-2 text-[13px] text-[var(--text-muted)]">If channels don’t load, the connection may not have been saved. <button type="button" onClick={connectSlack} className="font-medium text-[var(--badge-info-text)] underline hover:no-underline">Reconnect</button></p>
+                <p className="mt-2 text-[13px] text-[var(--text-muted)]">If channels don’t load, the connection may not have been saved. <button type="button" onClick={connectSlack} disabled={connectingToSlack} className="font-medium text-[var(--badge-info-text)] underline hover:no-underline disabled:opacity-70 disabled:no-underline">{connectingToSlack ? "Connecting…" : "Reconnect"}</button></p>
               )}
               {!showAsConnected && (
                 <div className="mt-4 flex flex-wrap items-center gap-2">
-                  <button type="button" onClick={connectSlack} className={btnPrimary + " inline-flex gap-2"}>
-                    <MessageCircle className="size-4" />
-                    Connect to Slack
+                  <button
+                    type="button"
+                    onClick={connectSlack}
+                    disabled={connectingToSlack}
+                    className={`${btnPrimary} inline-flex gap-2 disabled:pointer-events-none ${connectingToSlack ? "slack-connect-loading" : ""}`}
+                  >
+                    {connectingToSlack ? (
+                      "Connecting…"
+                    ) : (
+                      <>
+                        <MessageCircle className="size-4" />
+                        Connect to Slack
+                      </>
+                    )}
                   </button>
                   {slackLoading && (
                     <span className="text-[13px] text-[var(--text-muted)]">Checking connection…</span>
@@ -352,7 +555,7 @@ function IntegrationsContent() {
                     Messages in the selected channel become to-dos. Invite the Roof Flow app to the channel in Slack if needed.
                   </p>
                   {!slackStatus?.channelId && !slackLoading && (
-                    <p className="mt-2 rounded-[var(--radius)] border border-[var(--badge-warning-text)]/40 bg-[var(--badge-warning-bg)] px-3 py-2 text-[13px] text-[var(--badge-warning-text)]">
+                    <p className="mt-2 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--muted-bg)] px-3 py-2.5 text-[13px] leading-snug text-[var(--text-secondary)]">
                       Pick a channel below so messages there become to-dos. Until you pick one, new Slack messages won’t create to-dos.
                     </p>
                   )}
@@ -411,11 +614,125 @@ function IntegrationsContent() {
         </div>
       </section>
 
+      {/* Microsoft 365 */}
+      <section ref={microsoftSectionRef} className="space-y-4" aria-label="Microsoft 365 integration">
+        <div className="flex items-center gap-2">
+          <span className="flex size-8 items-center justify-center rounded-full bg-[var(--badge-info-bg)] text-[12px] font-bold text-[var(--badge-info-text)]">
+            2
+          </span>
+          <h2 className="text-[13px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+            Microsoft 365
+          </h2>
+        </div>
+        <div className="rounded-[var(--radius-xl)] border border-[var(--border)] bg-[var(--surface)] px-6 py-6 shadow-[var(--shadow-card)] sm:px-8 sm:py-8">
+          <div className="flex gap-4">
+            <div
+              className="flex size-14 shrink-0 items-center justify-center rounded-2xl border border-[var(--border)] bg-[var(--muted-bg)] p-2.5 text-[var(--text-muted)]"
+              aria-hidden
+            >
+              <IntegrationLogo logoUrl={LOGOS.microsoft365} fallbackIcon={Cloud} sizeClass="size-8" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <h3 className="text-[18px] font-semibold text-[var(--text-primary)]">Microsoft 365</h3>
+                {showMicrosoftConnected && (
+                  <>
+                    <span
+                      className="inline-flex items-center gap-1 rounded-full bg-[var(--badge-success-bg)] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-[var(--badge-success-text)]"
+                      aria-live="polite"
+                      aria-label="Microsoft 365 connected"
+                    >
+                      <Check className="size-3.5" strokeWidth={2.5} aria-hidden />
+                      Connected
+                    </span>
+                    <button
+                      type="button"
+                      onClick={disconnectMicrosoft}
+                      disabled={microsoftDisconnectLoading}
+                      className="text-[13px] text-[var(--text-muted)] underline hover:text-[var(--text-secondary)] disabled:opacity-50"
+                    >
+                      {microsoftDisconnectLoading ? "Disconnecting…" : "Disconnect"}
+                    </button>
+                  </>
+                )}
+              </div>
+              <p className="mt-2 text-[14px] leading-relaxed text-[var(--helper-text)]">
+                Sync your L10 meeting to Outlook calendar and work where you already are.
+              </p>
+              {microsoftMessage === "error" && (
+                <p className="mt-2 text-[14px] text-[var(--badge-warning-text)]">
+                  Microsoft 365 connection failed. Try again.
+                  {searchParams.get("message") && (
+                    <span className="mt-1 block font-normal text-[var(--text-muted)]">
+                      {decodeURIComponent(searchParams.get("message") ?? "")}
+                    </span>
+                  )}
+                </p>
+              )}
+              {searchParams.get("microsoft") === "connected" && searchParams.get("storage") === "failed" && (
+                <div className="mt-2 rounded-[var(--radius)] border border-[var(--badge-warning-text)]/40 bg-[var(--badge-warning-bg)] px-3 py-2 text-[13px] text-[var(--badge-warning-text)]">
+                  Connected, but the connection couldn’t be saved. Calendar sync may stop after a redeploy. Check Firebase and try <strong>Disconnect</strong> then <strong>Connect</strong> again.
+                </div>
+              )}
+              {!showMicrosoftConnected && (
+                <div className="mt-4 flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={connectMicrosoft}
+                    disabled={connectingToMicrosoft}
+                    className={`${btnPrimary} inline-flex gap-2 disabled:pointer-events-none`}
+                  >
+                    {connectingToMicrosoft ? (
+                      "Connecting…"
+                    ) : (
+                      <>
+                        <Cloud className="size-4" />
+                        Connect Microsoft 365
+                      </>
+                    )}
+                  </button>
+                  {microsoftLoading && (
+                    <span className="text-[13px] text-[var(--text-muted)]">Checking connection…</span>
+                  )}
+                </div>
+              )}
+              {showMicrosoftConnected && (
+                <div className="mt-6 border-t border-[var(--border)] pt-6">
+                  <div className="text-[13px] font-medium text-[var(--text-secondary)]">Outlook calendar</div>
+                  <p className="mt-1 text-[13px] text-[var(--text-muted)]">
+                    Create or update a recurring L10 event in your Outlook calendar from your default meeting template.
+                  </p>
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={syncL10ToCalendar}
+                      disabled={syncCalendarLoading}
+                      className={`${btnSecondary} inline-flex gap-2 disabled:pointer-events-none`}
+                    >
+                      <Calendar className="size-4" />
+                      {syncCalendarLoading ? "Syncing…" : "Sync L10 to Calendar"}
+                    </button>
+                    {syncCalendarMessage === "success" && (
+                      <span className="text-[13px] text-[var(--badge-success-text)]">Synced to Outlook.</span>
+                    )}
+                    {syncCalendarMessage === "error" && (
+                      <span className="text-[13px] text-[var(--badge-warning-text)]">
+                        {syncCalendarError ?? "Sync failed. Try again."}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Coming next */}
       <section className="space-y-4">
         <div className="flex items-center gap-2">
           <span className="flex size-8 items-center justify-center rounded-full bg-[var(--muted-bg)] text-[12px] font-bold text-[var(--text-muted)]">
-            2
+            3
           </span>
           <h2 className="text-[13px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
             Coming next
@@ -451,8 +768,14 @@ function IntegrationsContent() {
       {/* Footer line */}
       <p className="text-center text-[13px] text-[var(--helper-text)]">
         Want something else? Use{" "}
-        <span className="font-medium text-[var(--text-secondary)]">Give feedback</span> in the
-        sidebar and tell us which integration you need.
+        <button
+          type="button"
+          onClick={openFeedback}
+          className="font-medium text-[var(--badge-info-text)] underline hover:no-underline"
+        >
+          Give feedback
+        </button>{" "}
+        in the sidebar and tell us which integration you need.
       </p>
     </div>
   );
