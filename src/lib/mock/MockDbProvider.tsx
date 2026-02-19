@@ -13,6 +13,7 @@ type MockDbApi = {
   db: MockDb;
   me: { id: string; name: string };
   weekOf: string;
+  firestore: { enabled: boolean; error: string | null };
 
   /** True if current user's role has the permission (Owner has all). */
   hasPermission(code: PermissionCode): boolean;
@@ -85,6 +86,7 @@ function loadPersistedFeedback(): import("@/lib/domain").FeedbackItem[] {
 
 export function MockDbProvider({ children }: { children: React.ReactNode }) {
   const [db, setDb] = useState<MockDb>(() => createInitialMockDb());
+  const [firestoreError, setFirestoreError] = useState<string | null>(null);
   const authState = useAuth();
 
   const useFirestore =
@@ -111,7 +113,10 @@ export function MockDbProvider({ children }: { children: React.ReactNode }) {
 
   // Firestore subscriptions (optional, enabled by env vars).
   useEffect(() => {
-    if (!firestore) return;
+    if (!firestore) {
+      setFirestoreError(null);
+      return;
+    }
 
     const base = (colName: string) =>
       collection(firestore, "companies", companyId, "teams", teamId, colName);
@@ -119,10 +124,17 @@ export function MockDbProvider({ children }: { children: React.ReactNode }) {
     const unsubs: Array<() => void> = [];
 
     unsubs.push(
-      onSnapshot(base("todos"), (snap) => {
-        const todos = snap.docs.map((d) => ({ id: d.id, ...d.data() })) as MockDb["todos"];
-        setDb((prev) => ({ ...prev, todos }));
-      }),
+      onSnapshot(
+        base("todos"),
+        (snap) => {
+          const todos = snap.docs.map((d) => ({ id: d.id, ...d.data() })) as MockDb["todos"];
+          setDb((prev) => ({ ...prev, todos }));
+        },
+        (err) => {
+          console.error("[Firestore] onSnapshot(todos) failed", err);
+          setFirestoreError(typeof (err as any)?.message === "string" ? (err as any).message : String(err));
+        },
+      ),
     );
 
     unsubs.push(
@@ -243,6 +255,7 @@ export function MockDbProvider({ children }: { children: React.ReactNode }) {
       db,
       me: { id: me.id, name: me.name },
       weekOf,
+      firestore: { enabled: Boolean(firestore), error: firestoreError },
 
       hasPermission(code) {
         if (isOwner) return true;
@@ -908,7 +921,7 @@ export function MockDbProvider({ children }: { children: React.ReactNode }) {
         }
       },
     };
-  }, [companyId, db, firestore, meFromAuth, teamId, weekOf]);
+  }, [companyId, db, firestore, firestoreError, meFromAuth, teamId, weekOf]);
 
   return <Ctx.Provider value={api}>{children}</Ctx.Provider>;
 }

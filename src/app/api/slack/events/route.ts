@@ -144,6 +144,9 @@ export async function POST(request: NextRequest) {
   const title = text.length > TITLE_MAX_LEN ? text.slice(0, TITLE_MAX_LEN - 1) + "…" : text;
   const now = new Date().toISOString();
   const todoId = `td_${crypto.randomUUID().slice(0, 10)}`;
+  const firestorePath = `companies/${COMPANY_ID}/teams/${TEAM_ID}/todos/${todoId}`;
+  console.info("[Slack events] Firestore path (use this in Firebase Console → (default) DB):", firestorePath);
+
   const todoRef = db
     .collection("companies")
     .doc(COMPANY_ID)

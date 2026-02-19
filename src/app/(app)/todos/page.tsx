@@ -156,7 +156,7 @@ function EditTodoModal({
 }
 
 export default function TodosPage() {
-  const { db, createTodo, toggleTodo, updateTodo, deleteTodo, hasPermission } = useMockDb();
+  const { db, createTodo, toggleTodo, updateTodo, deleteTodo, hasPermission, firestore } = useMockDb();
   const { toast } = useToast();
   const [modalOpen, setModalOpen] = useState(false);
   const [title, setTitle] = useState("");
@@ -222,6 +222,13 @@ export default function TodosPage() {
 
   return (
     <div className="space-y-8">
+      {firestore.enabled && firestore.error && (
+        <div className="rounded-[var(--radius)] border border-[var(--badge-warning-text)]/40 bg-[var(--badge-warning-bg)] px-4 py-3 text-[13px] text-[var(--badge-warning-text)]">
+          Firestore is enabled, but the app couldn’t subscribe to live updates:{" "}
+          <span className="font-medium">{firestore.error}</span>. This usually means Firestore rules require
+          authentication or the client is pointed at a different Firebase project than the server.
+        </div>
+      )}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <PageTitle subtitle="Weekly action items. If it needs discussion, turn it into an Issue." />
         <Link href="/meetings/run" className={btnSecondary + " inline-flex gap-2"}>
