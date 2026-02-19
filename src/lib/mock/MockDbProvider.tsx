@@ -412,7 +412,6 @@ export function MockDbProvider({ children }: { children: React.ReactNode }) {
       },
 
       updateTodo(todoId, payload) {
-        if (!this.hasPermission("edit_todos")) return;
         const existing = db.todos.find((t) => t.id === todoId);
         if (!existing) return;
         const updates: Partial<typeof existing> = {};
@@ -434,7 +433,6 @@ export function MockDbProvider({ children }: { children: React.ReactNode }) {
       },
 
       deleteTodo(todoId) {
-        if (!this.hasPermission("edit_todos")) return;
         if (firestore) {
           const ref = docRef("todos", todoId);
           if (ref) void deleteDoc(ref);

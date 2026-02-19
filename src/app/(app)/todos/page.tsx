@@ -156,7 +156,7 @@ function EditTodoModal({
 }
 
 export default function TodosPage() {
-  const { db, createTodo, toggleTodo, updateTodo, deleteTodo, hasPermission, firestore } = useMockDb();
+  const { db, createTodo, toggleTodo, updateTodo, deleteTodo, firestore } = useMockDb();
   const { toast } = useToast();
   const [modalOpen, setModalOpen] = useState(false);
   const [title, setTitle] = useState("");
@@ -165,7 +165,6 @@ export default function TodosPage() {
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const modalInputRef = useRef<HTMLInputElement>(null);
   const completeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const canEditTodos = hasPermission("edit_todos");
 
   const handleComplete = (id: string) => {
     if (completingId) return;
@@ -488,8 +487,7 @@ export default function TodosPage() {
                       </p>
                     )}
                   </div>
-                  {canEditTodos && (
-                    <div className="flex shrink-0 items-center gap-1">
+                  <div className="flex shrink-0 items-center gap-1">
                       <button
                         type="button"
                         onClick={() => setEditTodo({
@@ -515,7 +513,6 @@ export default function TodosPage() {
                         <Trash2 className="size-4" />
                       </button>
                     </div>
-                  )}
                 </div>
               );
             })
