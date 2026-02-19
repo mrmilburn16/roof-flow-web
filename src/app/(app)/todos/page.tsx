@@ -2,10 +2,10 @@
 
 import Link from "next/link";
 import { useMemo, useState, useRef, useEffect } from "react";
-import { Plus, CheckSquare, Square, Play, User, RotateCcw, Pencil, Trash2, ExternalLink } from "lucide-react";
+import { Plus, CheckSquare, Square, Play, User, RotateCcw, Pencil, Trash2, ExternalLink, List, LayoutGrid, MessageCircle } from "lucide-react";
 import { useMockDb } from "@/lib/mock/MockDbProvider";
 import { useToast } from "@/lib/toast/ToastProvider";
-import { PageTitle, card, inputBase, btnPrimary, btnSecondary } from "@/components/ui";
+import { PageTitle, card, inputBase, btnPrimary, btnSecondary, Select } from "@/components/ui";
 import { EmptyState } from "@/components/EmptyState";
 
 function ordinal(n: number): string {
@@ -120,19 +120,16 @@ function EditTodoModal({
             />
           </div>
           <div>
-            <label htmlFor="edit-todo-owner" className="block text-[13px] font-medium text-[var(--text-secondary)]">Owner</label>
-            <select
+            <label id="edit-todo-owner-label" className="block text-[13px] font-medium text-[var(--text-secondary)]">Owner</label>
+            <Select
               id="edit-todo-owner"
-              value={ownerId}
-              onChange={(e) => setOwnerId(e.target.value)}
-              className={inputBase + " mt-1 w-full"}
               aria-label="Owner"
-            >
-              <option value="">Unassigned</option>
-              {users.map((u) => (
-                <option key={u.id} value={u.id}>{u.name}</option>
-              ))}
-            </select>
+              value={ownerId}
+              onChange={(v) => setOwnerId(v)}
+              options={[{ value: "", label: "Unassigned" }, ...users.map((u) => ({ value: u.id, label: u.name }))]}
+              placeholder="Unassigned"
+              className="mt-1 w-full"
+            />
           </div>
           <div>
             <label htmlFor="edit-todo-notes" className="block text-[13px] font-medium text-[var(--text-secondary)]">Notes</label>
@@ -163,6 +160,7 @@ export default function TodosPage() {
   const [completingId, setCompletingId] = useState<string | null>(null);
   const [editTodo, setEditTodo] = useState<{ id: string; title: string; dueDate: string; ownerId: string; notes: string } | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [todoView, setTodoView] = useState<"list" | "cards">("list");
   const modalInputRef = useRef<HTMLInputElement>(null);
   const completeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -238,23 +236,47 @@ export default function TodosPage() {
 
       <div className={card}>
         <div className="flex flex-col gap-5 border-b border-[var(--border)] p-5 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <div className="text-[15px] font-semibold text-[var(--text-primary)]">
-              Open To-Dos
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+            <div>
+              <div className="text-[15px] font-semibold text-[var(--text-primary)]">
+                Open To-Dos
+              </div>
+              <div className="mt-1 flex flex-wrap items-center gap-2 text-[13px] text-[var(--text-muted)]">
+                <span>{openTodos.length} open</span>
+                {doneTodos.length > 0 && (
+                  <>
+                    <span>·</span>
+                    <span>{db.todos.filter((t) => t.status === "done").length} completed</span>
+                  </>
+                )}
+                {overdueCount > 0 && (
+                  <span className="font-medium text-[var(--badge-warning-text)]">
+                    {overdueCount} overdue
+                  </span>
+                )}
+              </div>
             </div>
-            <div className="mt-1 flex flex-wrap items-center gap-2 text-[13px] text-[var(--text-muted)]">
-              <span>{openTodos.length} open</span>
-              {doneTodos.length > 0 && (
-                <>
-                  <span>·</span>
-                  <span>{db.todos.filter((t) => t.status === "done").length} completed</span>
-                </>
-              )}
-              {overdueCount > 0 && (
-                <span className="font-medium text-[var(--badge-warning-text)]">
-                  {overdueCount} overdue
-                </span>
-              )}
+            <div className="flex items-center gap-0.5 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] p-0.5" role="tablist" aria-label="View mode">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={todoView === "list"}
+                onClick={() => setTodoView("list")}
+                className={`inline-flex items-center gap-1.5 rounded-[var(--radius)] px-3 py-2 text-[13px] font-medium transition ${todoView === "list" ? "bg-[var(--muted-bg)] text-[var(--text-primary)] shadow-sm" : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]"}`}
+              >
+                <List className="size-4" />
+                List
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={todoView === "cards"}
+                onClick={() => setTodoView("cards")}
+                className={`inline-flex items-center gap-1.5 rounded-[var(--radius)] px-3 py-2 text-[13px] font-medium transition ${todoView === "cards" ? "bg-[var(--muted-bg)] text-[var(--text-primary)] shadow-sm" : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]"}`}
+              >
+                <LayoutGrid className="size-4" />
+                Cards
+              </button>
             </div>
           </div>
           <button
@@ -391,9 +413,8 @@ export default function TodosPage() {
           </div>
         )}
 
-        <div className="divide-y divide-[var(--border)]">
-          {openTodos.length === 0 ? (
-            <div className="px-5">
+        {openTodos.length === 0 ? (
+          <div className="px-5 py-8">
               <EmptyState
                 title="No open To-Dos"
                 description="Click “Add to-do” above or capture items during the meeting."
@@ -404,9 +425,10 @@ export default function TodosPage() {
                   </button>
                 }
               />
-            </div>
-          ) : (
-            openTodos.map((t) => {
+          </div>
+        ) : todoView === "list" ? (
+          <div className="divide-y divide-[var(--border)]">
+            {openTodos.map((t) => {
               const due = formatDue(t.dueDate);
               const ownerName = t.ownerId ? (userById.get(t.ownerId) ?? "") : "";
               const isSlack = t.source === "slack" && t.sourceMeta;
@@ -515,9 +537,100 @@ export default function TodosPage() {
                     </div>
                 </div>
               );
-            })
-          )}
-        </div>
+            })}
+          </div>
+        ) : (
+          <div className="grid gap-4 p-5 sm:grid-cols-2 lg:grid-cols-3">
+            {openTodos.map((t) => {
+              const due = formatDue(t.dueDate);
+              const ownerName = t.ownerId ? (userById.get(t.ownerId) ?? "") : "";
+              const isSlack = t.source === "slack" && t.sourceMeta;
+              const slackName = t.sourceMeta?.slackUserDisplayName ?? "Slack";
+              const slackChannel = t.sourceMeta?.slackChannelName;
+              const slackUrl = t.sourceMeta?.slackMessageUrl;
+              const isCompleting = completingId === t.id;
+              const initials = isSlack && slackName ? slackName.split(/\s+/).map((n) => n[0]).join("").slice(0, 2).toUpperCase() : ownerName ? ownerName.split(/\s+/).map((n) => n[0]).join("").slice(0, 2).toUpperCase() : "?";
+              return (
+                <div
+                  key={t.id}
+                  className={`relative flex flex-col rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] shadow-[var(--shadow-card)] transition hover:shadow-[0_4px_12px_rgba(0,0,0,0.06)] ${isCompleting ? "opacity-90" : ""}`}
+                  style={isSlack ? { borderLeftWidth: "4px", borderLeftColor: "#4A154B" } : undefined}
+                >
+                  <div className="flex items-start gap-3 p-4">
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); handleComplete(t.id); }}
+                      disabled={isCompleting}
+                      className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--text-muted)] hover:border-[var(--text-muted)] hover:text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--ring)] disabled:pointer-events-none"
+                      title="Mark done"
+                      aria-label={`Mark "${t.title}" as done`}
+                    >
+                      {isCompleting ? <CheckSquare className="size-4 text-[var(--badge-success-text)]" /> : <Square className="size-4" />}
+                    </button>
+                    <div className="min-w-0 flex-1">
+                      <div className={`text-[15px] font-semibold leading-snug text-[var(--text-primary)] ${isCompleting ? "line-through text-[var(--text-secondary)]" : ""}`}>
+                        {t.title}
+                      </div>
+                      {isSlack ? (
+                        <div className="mt-3 flex flex-wrap items-center gap-2">
+                          <span className="inline-flex items-center gap-1.5 rounded-full bg-[#4A154B]/10 px-2.5 py-1 text-[11px] font-medium text-[#4A154B]">
+                            <MessageCircle className="size-3" />
+                            Slack
+                          </span>
+                          {slackChannel && (
+                            <span className="rounded-full border border-[var(--border)] bg-[var(--muted-bg)] px-2.5 py-1 text-[11px] font-medium text-[var(--text-secondary)]">
+                              #{slackChannel}
+                            </span>
+                          )}
+                          <span className="flex items-center gap-1.5 text-[12px] text-[var(--text-muted)]">
+                            <span className="flex size-6 items-center justify-center rounded-full bg-[var(--badge-info-bg)] text-[10px] font-semibold text-[var(--badge-info-text)]">
+                              {initials}
+                            </span>
+                            {slackName}
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="mt-2 flex flex-wrap items-center gap-2 text-[12px] text-[var(--text-muted)]">
+                          <span className="inline-flex items-center gap-1 rounded-full bg-[var(--muted-bg)] px-2.5 py-1 text-[11px]">
+                            In app
+                          </span>
+                          {(due || ownerName) && (
+                            <span className="flex items-center gap-1">
+                              {due && <span className={due.overdue ? "font-medium text-[var(--badge-warning-text)]" : ""}>{due.label}</span>}
+                              {ownerName && <><span>·</span><span>{ownerName}</span></>}
+                            </span>
+                          )}
+                        </div>
+                      )}
+                      {t.notes?.trim() && (
+                        <p className="mt-2 text-[13px] leading-snug text-[var(--text-secondary)] line-clamp-2">
+                          {t.notes}
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex shrink-0 items-center gap-0.5">
+                      <button type="button" onClick={() => setEditTodo({ id: t.id, title: t.title, dueDate: t.dueDate ?? "", ownerId: t.ownerId ?? "", notes: t.notes ?? "" })} className="rounded-[var(--radius)] p-2 text-[var(--text-muted)] hover:bg-[var(--muted-bg)] hover:text-[var(--text-primary)]" title="Edit" aria-label={`Edit "${t.title}"`}><Pencil className="size-4" /></button>
+                      <button type="button" onClick={() => setDeleteConfirmId(t.id)} className="rounded-[var(--radius)] p-2 text-[var(--text-muted)] hover:bg-[var(--badge-warning-bg)] hover:text-[var(--badge-warning-text)]" title="Delete" aria-label={`Delete "${t.title}"`}><Trash2 className="size-4" /></button>
+                    </div>
+                  </div>
+                  {isSlack && slackUrl && (
+                    <div className="border-t border-[var(--border)] px-4 py-2.5">
+                      <a
+                        href={slackUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 text-[13px] font-medium text-[#4A154B] hover:underline"
+                      >
+                        <ExternalLink className="size-3.5" />
+                        View in Slack
+                      </a>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
 
         {doneTodos.length > 0 && (
           <>
