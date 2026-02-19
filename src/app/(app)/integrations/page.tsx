@@ -271,6 +271,11 @@ function IntegrationsContent() {
     return () => clearTimeout(t);
   }, [microsoftMessage]);
 
+  const showMicrosoftConnected =
+    microsoftLoading
+      ? Boolean(microsoftMessage === "connected" || microsoftStatus?.connected)
+      : Boolean(microsoftStatus?.connected);
+
   useEffect(() => {
     if (!showMicrosoftConnected) return;
     let cancelled = false;
@@ -417,11 +422,6 @@ function IntegrationsContent() {
     setConnectingToMicrosoft(true);
     window.location.href = "/api/microsoft/oauth";
   };
-
-  const showMicrosoftConnected =
-    microsoftLoading
-      ? Boolean(microsoftMessage === "connected" || microsoftStatus?.connected)
-      : Boolean(microsoftStatus?.connected);
 
   const disconnectMicrosoft = async () => {
     if (microsoftDisconnectLoading) return;
