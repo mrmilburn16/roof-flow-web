@@ -99,6 +99,14 @@ function MeetingRunContent() {
   const [copied, setCopied] = useState(false);
   const [recapRating, setRecapRating] = useState<number | "">(existingFeedback?.rating ?? "");
   const [recapComment, setRecapComment] = useState(existingFeedback?.comment ?? "");
+  const [sendRecapToMe, setSendRecapToMe] = useState(true);
+  const [postRecapToTeams, setPostRecapToTeams] = useState(false);
+  const [recapSending, setRecapSending] = useState(false);
+  const [recapSendError, setRecapSendError] = useState<string | null>(null);
+  const [microsoftStatus, setMicrosoftStatus] = useState<{
+    connected: boolean;
+    teamsChannelId: string | null;
+  } | null>(null);
 
   const openTodos = useMemo(
     () => db.todos.filter((t) => t.status === "open"),
@@ -165,16 +173,76 @@ function MeetingRunContent() {
     if (showRecap) {
       setRecapRating(existingFeedback?.rating ?? "");
       setRecapComment(existingFeedback?.comment ?? "");
+      setRecapSendError(null);
     }
   }, [showRecap, existingFeedback?.rating, existingFeedback?.comment]);
 
-  const handleRecapDone = useCallback(() => {
+  useEffect(() => {
+    if (!showRecap) return;
+    let cancelled = false;
+    fetch("/api/microsoft/status")
+      .then((res) => res.json())
+      .then((data: { connected?: boolean; teamsChannelId?: string | null }) => {
+        if (!cancelled)
+          setMicrosoftStatus({
+            connected: Boolean(data?.connected),
+            teamsChannelId: data?.teamsChannelId ?? null,
+          });
+      })
+      .catch(() => {
+        if (!cancelled) setMicrosoftStatus({ connected: false, teamsChannelId: null });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [showRecap]);
+
+  const handleRecapDone = useCallback(async () => {
     const r = typeof recapRating === "number" ? recapRating : Number(recapRating);
     if (Number.isFinite(r) && r >= 1 && r <= 10) {
       setMeetingFeedback(weekOf, Math.round(r), recapComment.trim() || undefined);
     }
+    const doEmail = sendRecapToMe && microsoftStatus?.connected;
+    const doTeams = postRecapToTeams && microsoftStatus?.connected && microsoftStatus?.teamsChannelId;
+    if (doEmail || doTeams) {
+      setRecapSending(true);
+      setRecapSendError(null);
+      try {
+        const subject = `${template?.title ?? "L10"} — Week of ${formatWeek(weekOf)}`;
+        const res = await fetch("/api/microsoft/send-recap", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            subject,
+            body: recapText,
+            sendCopyToMe: doEmail,
+            postToTeams: doTeams,
+          }),
+        });
+        const data = (await res.json()) as { error?: string };
+        if (!res.ok && data?.error) {
+          setRecapSendError(data.error);
+          return;
+        }
+      } catch (err) {
+        setRecapSendError(err instanceof Error ? err.message : "Failed to send recap");
+        return;
+      } finally {
+        setRecapSending(false);
+      }
+    }
     setShowRecap(false);
-  }, [recapRating, recapComment, weekOf, setMeetingFeedback]);
+  }, [
+    recapRating,
+    recapComment,
+    weekOf,
+    setMeetingFeedback,
+    sendRecapToMe,
+    postRecapToTeams,
+    microsoftStatus,
+    template?.title,
+    recapText,
+  ]);
 
   return (
     <div className="space-y-6">
@@ -652,11 +720,41 @@ function MeetingRunContent() {
                   />
                 </div>
               </div>
+              {microsoftStatus?.connected && (
+                <div className="flex flex-col gap-2">
+                  <label className="flex items-center gap-2 text-[13px] text-[var(--text-secondary)]">
+                    <input
+                      type="checkbox"
+                      checked={sendRecapToMe}
+                      onChange={(e) => setSendRecapToMe(e.target.checked)}
+                      className="rounded border-[var(--border)]"
+                    />
+                    Send recap to my email
+                  </label>
+                  {microsoftStatus?.teamsChannelId && (
+                    <label className="flex items-center gap-2 text-[13px] text-[var(--text-secondary)]">
+                      <input
+                        type="checkbox"
+                        checked={postRecapToTeams}
+                        onChange={(e) => setPostRecapToTeams(e.target.checked)}
+                        className="rounded border-[var(--border)]"
+                      />
+                      Post recap to Teams channel
+                    </label>
+                  )}
+                </div>
+              )}
+              {recapSendError && (
+                <p className="text-[13px] text-[var(--badge-warning-text)]">
+                  {recapSendError}
+                </p>
+              )}
               <div className="flex gap-2">
                 <button
                   type="button"
                   onClick={handleCopyRecap}
                   className={btnSecondary + " flex items-center gap-2"}
+                  disabled={recapSending}
                 >
                   {copied ? (
                     <>
@@ -672,10 +770,11 @@ function MeetingRunContent() {
                 </button>
                 <button
                   type="button"
-                  onClick={handleRecapDone}
+                  onClick={() => void handleRecapDone()}
                   className={btnPrimary}
+                  disabled={recapSending}
                 >
-                  Done
+                  {recapSending ? "Sending…" : "Done"}
                 </button>
               </div>
             </div>

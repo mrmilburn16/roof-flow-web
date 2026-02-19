@@ -15,6 +15,10 @@ export type MicrosoftConfig = {
   /** Expiration time in milliseconds (Date.now()). We refresh when within 5 min of expiry. */
   expiresAt: number;
   outlookEventId?: string | null;
+  /** Teams channel for posting meeting recap (optional). */
+  teamsTeamId?: string | null;
+  teamsChannelId?: string | null;
+  teamsChannelName?: string | null;
 };
 
 const key = () => `microsoft:${COMPANY_ID}:${TEAM_ID}`;
@@ -40,6 +44,9 @@ async function getMicrosoftConfigFromFile(): Promise<MicrosoftConfig | null> {
       refreshToken: (data?.refreshToken as string) ?? "",
       expiresAt,
       outlookEventId: (data?.outlookEventId as string) ?? null,
+      teamsTeamId: (data?.teamsTeamId as string) ?? null,
+      teamsChannelId: (data?.teamsChannelId as string) ?? null,
+      teamsChannelName: (data?.teamsChannelName as string) ?? null,
     };
   } catch {
     return null;
@@ -57,6 +64,9 @@ async function setMicrosoftConfigFile(config: MicrosoftConfig): Promise<void> {
         refreshToken: config.refreshToken,
         expiresAt: config.expiresAt,
         outlookEventId: config.outlookEventId ?? null,
+        teamsTeamId: config.teamsTeamId ?? null,
+        teamsChannelId: config.teamsChannelId ?? null,
+        teamsChannelName: config.teamsChannelName ?? null,
       }),
       "utf-8"
     );
@@ -104,6 +114,9 @@ async function refreshAccessToken(config: MicrosoftConfig): Promise<MicrosoftCon
     refreshToken: data.refresh_token ?? config.refreshToken,
     expiresAt,
     outlookEventId: config.outlookEventId,
+    teamsTeamId: config.teamsTeamId,
+    teamsChannelId: config.teamsChannelId,
+    teamsChannelName: config.teamsChannelName,
   };
   return next;
 }
@@ -130,6 +143,9 @@ export async function getMicrosoftConfig(): Promise<MicrosoftConfig | null> {
         refreshToken,
         expiresAt,
         outlookEventId: (data?.outlookEventId as string) ?? null,
+        teamsTeamId: (data?.teamsTeamId as string) ?? null,
+        teamsChannelId: (data?.teamsChannelId as string) ?? null,
+        teamsChannelName: (data?.teamsChannelName as string) ?? null,
       };
     }
   }
@@ -171,6 +187,9 @@ export async function setMicrosoftConfig(config: MicrosoftConfig): Promise<void>
       refreshToken: config.refreshToken,
       expiresAt: config.expiresAt,
       outlookEventId: config.outlookEventId ?? null,
+      teamsTeamId: config.teamsTeamId ?? null,
+      teamsChannelId: config.teamsChannelId ?? null,
+      teamsChannelName: config.teamsChannelName ?? null,
       updatedAt: new Date().toISOString(),
     });
   }
@@ -188,6 +207,19 @@ export async function setMicrosoftOutlookEventId(eventId: string | null): Promis
   const config = await getMicrosoftConfig();
   if (!config) return;
   const next = { ...config, outlookEventId: eventId };
+  await setMicrosoftConfig(next);
+}
+
+/** Update Teams channel for recap in stored config. */
+export async function setMicrosoftTeamsChannel(teamId: string | null, channelId: string | null, channelName?: string | null): Promise<void> {
+  const config = await getMicrosoftConfig();
+  if (!config) return;
+  const next = {
+    ...config,
+    teamsTeamId: teamId ?? null,
+    teamsChannelId: channelId ?? null,
+    teamsChannelName: channelName ?? null,
+  };
   await setMicrosoftConfig(next);
 }
 

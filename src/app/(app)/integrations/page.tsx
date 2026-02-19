@@ -48,7 +48,13 @@ function IntegrationLogo({
 type SlackStatus = { connected: boolean; channelId: string | null; channelName: string | null };
 type SlackChannel = { id: string; name: string; isMember?: boolean };
 
-type MicrosoftStatus = { connected: boolean; outlookEventId: string | null };
+type MicrosoftStatus = {
+  connected: boolean;
+  outlookEventId: string | null;
+  teamsTeamId: string | null;
+  teamsChannelId: string | null;
+  teamsChannelName: string | null;
+};
 
 const SLACK_STATUS_CACHE_KEY = "roofflow_slack_status";
 const MICROSOFT_STATUS_CACHE_KEY = "roofflow_microsoft_status";
@@ -147,6 +153,12 @@ function IntegrationsContent() {
   const [syncCalendarLoading, setSyncCalendarLoading] = useState(false);
   const [syncCalendarMessage, setSyncCalendarMessage] = useState<"success" | "error" | null>(null);
   const [syncCalendarError, setSyncCalendarError] = useState<string | null>(null);
+  const [teamsList, setTeamsList] = useState<{ id: string; displayName: string }[]>([]);
+  const [channelsList, setChannelsList] = useState<{ id: string; displayName: string }[]>([]);
+  const [teamsListLoading, setTeamsListLoading] = useState(false);
+  const [channelsListLoading, setChannelsListLoading] = useState(false);
+  const [setTeamsChannelLoading, setSetTeamsChannelLoading] = useState(false);
+  const [selectedTeamsTeamId, setSelectedTeamsTeamId] = useState<string>("");
   const microsoftSectionRef = useRef<HTMLElement>(null);
   const didScrollToMicrosoftRef = useRef(false);
   const { getMeetingTemplate } = useMockDb();
@@ -219,7 +231,13 @@ function IntegrationsContent() {
         setCachedMicrosoftStatus(data);
       } catch {
         if (!cancelled) {
-          const fallback: MicrosoftStatus = { connected: false, outlookEventId: null };
+          const fallback: MicrosoftStatus = {
+            connected: false,
+            outlookEventId: null,
+            teamsTeamId: null,
+            teamsChannelId: null,
+            teamsChannelName: null,
+          };
           setMicrosoftStatus(fallback);
           setCachedMicrosoftStatus(fallback);
         }
@@ -252,6 +270,51 @@ function IntegrationsContent() {
     }, 100);
     return () => clearTimeout(t);
   }, [microsoftMessage]);
+
+  useEffect(() => {
+    if (!showMicrosoftConnected) return;
+    let cancelled = false;
+    setTeamsListLoading(true);
+    fetch("/api/microsoft/teams")
+      .then((res) => res.json())
+      .then((data: { teams?: { id: string; displayName: string }[]; error?: string }) => {
+        if (cancelled) return;
+        if (data.teams) setTeamsList(data.teams);
+      })
+      .finally(() => {
+        if (!cancelled) setTeamsListLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [showMicrosoftConnected]);
+
+  useEffect(() => {
+    if (showMicrosoftConnected && microsoftStatus?.teamsTeamId) {
+      setSelectedTeamsTeamId(microsoftStatus.teamsTeamId);
+    }
+  }, [showMicrosoftConnected, microsoftStatus?.teamsTeamId]);
+
+  useEffect(() => {
+    if (!selectedTeamsTeamId || !showMicrosoftConnected) {
+      setChannelsList([]);
+      return;
+    }
+    let cancelled = false;
+    setChannelsListLoading(true);
+    fetch(`/api/microsoft/teams/${encodeURIComponent(selectedTeamsTeamId)}/channels`)
+      .then((res) => res.json())
+      .then((data: { channels?: { id: string; displayName: string }[]; error?: string }) => {
+        if (cancelled) return;
+        if (data.channels) setChannelsList(data.channels);
+      })
+      .finally(() => {
+        if (!cancelled) setChannelsListLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [showMicrosoftConnected, selectedTeamsTeamId]);
 
   const connectSlack = () => {
     setConnectingToSlack(true);
@@ -322,6 +385,34 @@ function IntegrationsContent() {
     }
   };
 
+  const setMicrosoftTeamsChannel = async (
+    teamId: string,
+    channelId: string,
+    channelName: string
+  ) => {
+    setSetTeamsChannelLoading(true);
+    try {
+      const res = await fetch("/api/microsoft/set-teams-channel", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ teamId, channelId, channelName }),
+      });
+      const data = (await res.json()) as { ok?: boolean };
+      if (data.ok && microsoftStatus) {
+        const next: MicrosoftStatus = {
+          ...microsoftStatus,
+          teamsTeamId: teamId,
+          teamsChannelId: channelId,
+          teamsChannelName: channelName,
+        };
+        setMicrosoftStatus(next);
+        setCachedMicrosoftStatus(next);
+      }
+    } finally {
+      setSetTeamsChannelLoading(false);
+    }
+  };
+
   const connectMicrosoft = () => {
     setConnectingToMicrosoft(true);
     window.location.href = "/api/microsoft/oauth";
@@ -339,8 +430,20 @@ function IntegrationsContent() {
     try {
       const res = await fetch("/api/microsoft/disconnect", { method: "POST" });
       if (res.ok) {
-        setCachedMicrosoftStatus({ connected: false, outlookEventId: null });
-        setMicrosoftStatus({ connected: false, outlookEventId: null });
+        setCachedMicrosoftStatus({
+          connected: false,
+          outlookEventId: null,
+          teamsTeamId: null,
+          teamsChannelId: null,
+          teamsChannelName: null,
+        });
+        setMicrosoftStatus({
+          connected: false,
+          outlookEventId: null,
+          teamsTeamId: null,
+          teamsChannelId: null,
+          teamsChannelName: null,
+        });
       }
     } finally {
       setMicrosoftDisconnectLoading(false);
@@ -363,9 +466,13 @@ function IntegrationsContent() {
         title?: string;
         schedule?: import("@/lib/domain").MeetingSchedule;
         timeZone?: string;
+        durationMinutes?: number;
       } = {};
       if (template?.title) body.title = template.title;
       if (template?.schedule) body.schedule = template.schedule;
+      if (template?.sections?.length) {
+        body.durationMinutes = template.sections.reduce((sum, s) => sum + (s.durationMinutes ?? 0), 0);
+      }
       try {
         body.timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
       } catch {
@@ -380,10 +487,15 @@ function IntegrationsContent() {
       if (data.ok) {
         setSyncCalendarMessage("success");
         setSyncCalendarError(null);
-        setMicrosoftStatus((prev) => (prev ? { ...prev, outlookEventId: data.eventId ?? null } : prev));
+        setMicrosoftStatus((prev) =>
+          prev ? { ...prev, outlookEventId: data.eventId ?? null } : prev
+        );
         setCachedMicrosoftStatus({
           connected: true,
           outlookEventId: data.eventId ?? null,
+          teamsTeamId: microsoftStatus?.teamsTeamId ?? null,
+          teamsChannelId: microsoftStatus?.teamsChannelId ?? null,
+          teamsChannelName: microsoftStatus?.teamsChannelName ?? null,
         });
       } else {
         setSyncCalendarMessage("error");
@@ -697,31 +809,92 @@ function IntegrationsContent() {
                 </div>
               )}
               {showMicrosoftConnected && (
-                <div className="mt-6 border-t border-[var(--border)] pt-6">
-                  <div className="text-[13px] font-medium text-[var(--text-secondary)]">Outlook calendar</div>
-                  <p className="mt-1 text-[13px] text-[var(--text-muted)]">
-                    Create or update a recurring L10 event in your Outlook calendar from your default meeting template.
-                  </p>
-                  <div className="mt-3 flex flex-wrap items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={syncL10ToCalendar}
-                      disabled={syncCalendarLoading}
-                      className={`${btnSecondary} inline-flex gap-2 disabled:pointer-events-none`}
-                    >
-                      <Calendar className="size-4" />
-                      {syncCalendarLoading ? "Syncing…" : "Sync L10 to Calendar"}
-                    </button>
-                    {syncCalendarMessage === "success" && (
-                      <span className="text-[13px] text-[var(--badge-success-text)]">Synced to Outlook.</span>
-                    )}
-                    {syncCalendarMessage === "error" && (
-                      <span className="text-[13px] text-[var(--badge-warning-text)]">
-                        {syncCalendarError ?? "Sync failed. Try again."}
-                      </span>
+                <>
+                  <div className="mt-6 border-t border-[var(--border)] pt-6">
+                    <div className="text-[13px] font-medium text-[var(--text-secondary)]">Outlook calendar</div>
+                    <p className="mt-1 text-[13px] text-[var(--text-muted)]">
+                      Create or update a recurring L10 event in your Outlook calendar from your default meeting template.
+                    </p>
+                    <div className="mt-3 flex flex-wrap items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={syncL10ToCalendar}
+                        disabled={syncCalendarLoading}
+                        className={`${btnSecondary} inline-flex gap-2 disabled:pointer-events-none`}
+                      >
+                        <Calendar className="size-4" />
+                        {syncCalendarLoading ? "Syncing…" : "Sync L10 to Calendar"}
+                      </button>
+                      {syncCalendarMessage === "success" && (
+                        <span className="text-[13px] text-[var(--badge-success-text)]">Synced to Outlook.</span>
+                      )}
+                      {syncCalendarMessage === "error" && (
+                        <span className="text-[13px] text-[var(--badge-warning-text)]">
+                          {syncCalendarError ?? "Sync failed. Try again."}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="mt-6 border-t border-[var(--border)] pt-6">
+                    <div className="text-[13px] font-medium text-[var(--text-secondary)]">Post meeting recap to Teams</div>
+                    <p className="mt-1 text-[13px] text-[var(--text-muted)]">
+                      Choose a channel to post the meeting recap when you conclude an L10.
+                    </p>
+                    {teamsListLoading ? (
+                      <p className="mt-3 text-[13px] text-[var(--text-muted)]">Loading teams…</p>
+                    ) : (
+                      <div className="mt-3 space-y-4">
+                        <div>
+                          <label htmlFor="microsoft-team-select" className="block text-[13px] font-medium text-[var(--text-secondary)]">
+                            Team
+                          </label>
+                          <Select
+                            id="microsoft-team-select"
+                            aria-label="Teams team"
+                            value={selectedTeamsTeamId}
+                            onChange={(teamId) => {
+                              setSelectedTeamsTeamId(teamId);
+                            }}
+                            options={teamsList.map((t) => ({ value: t.id, label: t.displayName }))}
+                            placeholder="Choose a team…"
+                            emptyMessage="No teams found"
+                            className="mt-1.5 w-full min-w-[20rem] max-w-md"
+                            disabled={setTeamsChannelLoading}
+                          />
+                        </div>
+                        <div>
+                          <label htmlFor="microsoft-channel-select" className="block text-[13px] font-medium text-[var(--text-secondary)]">
+                            Channel
+                          </label>
+                          {channelsListLoading ? (
+                            <p className="mt-1.5 text-[13px] text-[var(--text-muted)]">Loading channels…</p>
+                          ) : (
+                            <Select
+                              id="microsoft-channel-select"
+                              aria-label="Teams channel for recap"
+                              value={microsoftStatus?.teamsChannelId ?? ""}
+                              onChange={(channelId) => {
+                                const ch = channelsList.find((c) => c.id === channelId);
+                                if (ch && selectedTeamsTeamId)
+                                  setMicrosoftTeamsChannel(selectedTeamsTeamId, ch.id, ch.displayName);
+                              }}
+                              options={channelsList.map((c) => ({ value: c.id, label: `#${c.displayName}` }))}
+                              placeholder="Choose a channel…"
+                              emptyMessage={selectedTeamsTeamId ? "No channels found" : "Select a team first"}
+                              className="mt-1.5 w-full min-w-[20rem] max-w-md"
+                              disabled={setTeamsChannelLoading || !selectedTeamsTeamId}
+                            />
+                          )}
+                        </div>
+                        {microsoftStatus?.teamsChannelName && (
+                          <p className="text-[13px] text-[var(--text-muted)]">
+                            Recap will be posted to <strong className="text-[var(--text-secondary)]">#{microsoftStatus.teamsChannelName}</strong>
+                          </p>
+                        )}
+                      </div>
                     )}
                   </div>
-                </div>
+                </>
               )}
             </div>
           </div>

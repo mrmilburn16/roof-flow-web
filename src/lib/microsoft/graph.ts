@@ -8,7 +8,7 @@ const GRAPH_BASE = "https://graph.microsoft.com/v1.0";
 
 const DAY_NAMES = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"] as const;
 
-/** Call Microsoft Graph API. */
+/** Call Microsoft Graph API. Returns JSON. For 202/204 with no body, returns undefined. */
 export async function graphRequest<T = unknown>(
   accessToken: string,
   method: string,
@@ -27,6 +27,9 @@ export async function graphRequest<T = unknown>(
   if (!res.ok) {
     const err = (await res.json().catch(() => ({}))) as { error?: { message?: string } };
     throw new Error(err?.error?.message || res.statusText || `Graph API ${res.status}`);
+  }
+  if (res.status === 202 || res.status === 204 || res.headers.get("content-length") === "0") {
+    return undefined as T;
   }
   return res.json() as Promise<T>;
 }
@@ -182,4 +185,78 @@ export async function updateCalendarEvent(
 export async function deleteCalendarEvent(accessToken: string, eventId: string): Promise<void> {
   if (!eventId) return;
   await graphRequest(accessToken, "DELETE", `/me/events/${eventId}`);
+}
+
+/** Get current user's email (mail or userPrincipalName) for sending recap. */
+export async function getMeEmail(accessToken: string): Promise<string> {
+  const me = (await graphRequest<{ mail?: string; userPrincipalName?: string }>(
+    accessToken,
+    "GET",
+    "/me?$select=mail,userPrincipalName"
+  )) as { mail?: string; userPrincipalName?: string };
+  const email = me?.mail || me?.userPrincipalName;
+  if (!email) throw new Error("Could not read user email from Microsoft Graph");
+  return email;
+}
+
+export type SendMailParams = {
+  to: string;
+  subject: string;
+  /** Plain text body. */
+  body: string;
+  /** If true, send a copy to the same address (BCC self). */
+  saveToSentItems?: boolean;
+};
+
+/**
+ * Send an email via Outlook (Graph POST /me/sendMail).
+ * Requires Mail.Send delegated permission.
+ */
+export async function sendMail(accessToken: string, params: SendMailParams): Promise<void> {
+  const { to, subject, body, saveToSentItems = true } = params;
+  const message = {
+    subject,
+    body: { contentType: "Text" as const, content: body },
+    toRecipients: [{ emailAddress: { address: to } }],
+  };
+  await graphRequest(accessToken, "POST", "/me/sendMail", { message, saveToSentItems });
+}
+
+/** Team from /me/joinedTeams. */
+export type GraphTeam = { id: string; displayName: string };
+
+/** Channel from /teams/{id}/channels. */
+export type GraphChannel = { id: string; displayName: string };
+
+/** List teams the user has joined (Team.ReadBasic.All). */
+export async function listJoinedTeams(accessToken: string): Promise<GraphTeam[]> {
+  const data = (await graphRequest<{ value?: GraphTeam[] }>(accessToken, "GET", "/me/joinedTeams")) as {
+    value?: GraphTeam[];
+  };
+  return data?.value ?? [];
+}
+
+/** List channels in a team (Channel.ReadBasic.All). */
+export async function listChannels(accessToken: string, teamId: string): Promise<GraphChannel[]> {
+  const data = (await graphRequest<{ value?: GraphChannel[] }>(
+    accessToken,
+    "GET",
+    `/teams/${teamId}/channels`
+  )) as { value?: GraphChannel[] };
+  return data?.value ?? [];
+}
+
+/**
+ * Post a message to a Teams channel (ChannelMessage.Send).
+ * Body format: { body: { content: "string" } }. Content is plain text.
+ */
+export async function postChannelMessage(
+  accessToken: string,
+  teamId: string,
+  channelId: string,
+  content: string
+): Promise<void> {
+  await graphRequest(accessToken, "POST", `/teams/${teamId}/channels/${channelId}/messages`, {
+    body: { content },
+  });
 }

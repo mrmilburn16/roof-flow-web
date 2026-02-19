@@ -31,18 +31,29 @@ export function Select({
   disabled = false,
 }: SelectProps) {
   const [open, setOpen] = useState(false);
-  const [dropdownRect, setDropdownRect] = useState<{ top: number; left: number; width: number } | null>(null);
+  const [dropdownRect, setDropdownRect] = useState<{
+    top?: number;
+    bottom?: number;
+    left: number;
+    width: number;
+  } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
 
   const selected = options.find((o) => o.value === value);
   const displayLabel = selected?.label ?? placeholder;
 
+  const SPACE_NEEDED = 280;
+
   const updatePosition = () => {
     if (!containerRef.current) return;
     const rect = containerRef.current.getBoundingClientRect();
+    const spaceBelow = typeof window !== "undefined" ? window.innerHeight - rect.bottom : 0;
+    const openAbove = spaceBelow < SPACE_NEEDED;
     setDropdownRect({
-      top: rect.bottom + 6,
+      ...(openAbove
+        ? { bottom: window.innerHeight - rect.top + 6 }
+        : { top: rect.bottom + 6 }),
       left: rect.left,
       width: Math.max(rect.width, 280),
     });
@@ -148,7 +159,8 @@ export function Select({
             className="fixed z-[9999] min-h-[8rem] max-h-[320px] overflow-auto rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] py-1.5 shadow-[var(--shadow-card)]"
             style={{
               boxShadow: "var(--shadow-card), 0 0 0 1px var(--border)",
-              top: dropdownRect.top,
+              ...(dropdownRect.top !== undefined && { top: dropdownRect.top }),
+              ...(dropdownRect.bottom !== undefined && { bottom: dropdownRect.bottom }),
               left: dropdownRect.left,
               width: dropdownRect.width,
             }}

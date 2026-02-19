@@ -181,7 +181,7 @@ export default function EditAgendaPage({
   const totalMinutes = sections.reduce((sum, s) => sum + s.durationMinutes, 0);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 pb-48">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <PageTitle
           title="Edit template"

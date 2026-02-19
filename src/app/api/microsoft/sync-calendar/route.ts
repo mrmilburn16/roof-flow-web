@@ -19,6 +19,8 @@ type RequestBody = {
   schedule?: MeetingSchedule;
   /** IANA timezone (e.g. "America/New_York") so 9:00 is 9 AM local. Default America/New_York. */
   timeZone?: string;
+  /** Total meeting duration in minutes (e.g. 110). Default 60 if not provided. */
+  durationMinutes?: number;
 };
 
 /** POST: sync L10 meeting to Outlook calendar. Creates or overwrites the team's L10 event. */
@@ -35,11 +37,13 @@ export async function POST(request: NextRequest) {
   let schedule: MeetingSchedule | undefined;
 
   let timeZone: string | undefined;
+  let durationMinutes: number | undefined;
   try {
     const body = (await request.json()) as RequestBody;
     title = body?.title ?? "";
     schedule = body?.schedule;
     timeZone = body?.timeZone;
+    durationMinutes = typeof body?.durationMinutes === "number" && body.durationMinutes > 0 ? body.durationMinutes : undefined;
   } catch {
     title = "";
     schedule = undefined;
@@ -59,8 +63,12 @@ export async function POST(request: NextRequest) {
       const first = snap.docs[0];
       if (first) {
         const data = first.data();
-        title = (data?.title as string) ?? "Weekly Leadership Meeting";
-        schedule = data?.schedule as MeetingSchedule | undefined;
+        if (!title) title = (data?.title as string) ?? "Weekly Leadership Meeting";
+        if (!schedule) schedule = data?.schedule as MeetingSchedule | undefined;
+        if (durationMinutes === undefined && Array.isArray(data?.sections)) {
+          const sections = data.sections as { durationMinutes?: number }[];
+          durationMinutes = sections.reduce((sum, s) => sum + (s.durationMinutes ?? 0), 0) || 60;
+        }
       }
     }
   }
@@ -88,7 +96,7 @@ export async function POST(request: NextRequest) {
     const result = await createCalendarEvent(config.accessToken, {
       title,
       schedule,
-      durationMinutes: 60,
+      durationMinutes: durationMinutes ?? 60,
       timeZone,
     });
 

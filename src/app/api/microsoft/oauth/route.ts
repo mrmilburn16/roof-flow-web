@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 
 const MICROSOFT_CLIENT_ID = process.env.MICROSOFT_CLIENT_ID;
 
-/** Delegated scopes: sign-in, profile, and calendar read/write for L10 sync. */
-const SCOPES = "openid profile User.Read Calendars.ReadWrite";
+/** Delegated scopes: sign-in, calendar, mail (recap), and Teams (recap to channel). */
+const SCOPES =
+  "openid profile User.Read Calendars.ReadWrite Mail.Send Team.ReadBasic.All Channel.ReadBasic.All ChannelMessage.Send";
 
 export function GET(_request: NextRequest) {
   if (!MICROSOFT_CLIENT_ID) {
